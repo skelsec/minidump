@@ -10,8 +10,8 @@ import struct
 import logging
 
 from .minidumpreader import *
-from minidump.common_structs import *
-from minidump.streams import *
+from .common_structs import *
+from .streams import *
 
 
 class MINIDUMP_STREAM_TYPE(enum.Enum):

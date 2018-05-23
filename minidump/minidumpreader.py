@@ -4,8 +4,8 @@
 #  Tamas Jos (@skelsec)
 #
 
-from minidump.common_structs import * 
-from minidump.streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
+from .common_structs import * 
+from .streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
 class MinidumpFileReader:
 	def __init__(self, minidumpfile):

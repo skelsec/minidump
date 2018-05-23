@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
 	# Application name:
@@ -12,7 +12,7 @@ setup(
 	author_email="info@skelsec.com",
 
 	# Packages
-	packages=["minidump"],
+	packages=find_packages(),
 
 	# Include additional files into the package
 	include_package_data=True,
