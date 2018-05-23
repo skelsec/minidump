@@ -9,13 +9,13 @@ Python >= 3.6
 See help for possible options.
 
 # Advanced usage
-The script offers a conveinent way to navigate rough the process' memory via the ```MinidumpFileReader``` object.  
+The script offers a conveinent way to navigate through the process' memory via the ```MinidumpFileReader``` object.  
 Brief description on exposed functions:
 1. Search for binary pattern in a specific module's address space:  
   ```search_module(module_name, pattern)```
-2. Search for binary pattern the whole process' memory space:  
+2. Search for binary pattern in the whole process' memory space:  
 	```search(pattern)```
-3. Read ```size``` bytes starting from memory address ```	virt_addr	```:  
+3. Read ```size``` bytes starting from memory address ```virt_addr```:  
 	```read(virt_addr, size)```
 4. Read a pointer @address ```pos```:  
   -takes process architecture into account (x86/x64)  
