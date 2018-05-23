@@ -3,7 +3,7 @@
 # Author:
 #  Tamas Jos (@skelsec)
 #
-
+import struct
 from .common_structs import * 
 from .streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
