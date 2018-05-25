@@ -14,3 +14,6 @@ You should be using the buffered reader object, help will come later :)
 # Creating minidump file
 The ```createminidump.py``` script in the utils folder uses the Windows API to create minidump files. This script can also dump processes running on a different user context by enabling ```SeDebugPrivilege```.  
 Of course it only works if you are running it as administrator or a use that has ```SeDebugPrivilege```.
+
+# Installing
+```python3 setup.py install```
