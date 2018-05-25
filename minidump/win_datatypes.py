@@ -1,11 +1,20 @@
+#!/usr/bin/env python3
+#
+# Author:
+#  Tamas Jos (@skelsec)
+#
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa383751(v=vs.85).aspx
 
 class POINTER:
-	def __init__(self, finaltype):
+	def __init__(self, reader, finaltype):
+		self.location = reader.tell()
+		self.value = reader.read_uint()
 		self.finaltype = finaltype
 		
 	def read(self, reader, override_finaltype = None):
+		if self.value == 0:
+			return None
 		pos = reader.tell()
 		reader.move(self.value)
 		if override_finaltype:
@@ -17,8 +26,7 @@ class POINTER:
 		
 class PVOID(POINTER):
 	def __init__(self, reader):
-		super().__init__(None) #with void we cannot determine the final type
-		self.value = reader.read_uint()
+		super().__init__(reader, None) #with void we cannot determine the final type
 		
 class BOOL:
 	def __init__(self, reader):
@@ -39,7 +47,11 @@ class CCHAR:
 class CHAR:
 	def __init__(self, reader):
 		self.value = reader.read(1).decode('ascii')
-		
+
+class WORD:
+	def __init__(self, reader):
+		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = False)		
+
 class DWORD:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
@@ -50,8 +62,7 @@ class DWORDLONG:
 		
 class DWORD_PTR(POINTER):
 	def __init__(self, reader):
-		super().__init__(DWORD)
-		self.value = reader.read_uint()
+		super().__init__(reader, DWORD)
 		
 class DWORD32:
 	def __init__(self, reader):
@@ -61,17 +72,7 @@ class DWORD64:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)		
 
-"""
-class FLOAT:
-	def __init__(self, reader):
-		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)			
-
-class HALF_PTR(POINTER):
-	def __init__(self, reader):
-		self.value = reader.read_uint()		
-"""
-
-		
+	
 class HANDLE:
 	def __init__(self, reader):
 		self.value = reader.read_uint()
@@ -104,8 +105,11 @@ class INT:
 
 class INT_PTR(POINTER):
 	def __init__(self, reader):
-		super().__init__(INT)
-		self.value = reader.read_int()
+		super().__init__(reader, INT)
+
+class UINT8:
+	def __init__(self, reader):
+		self.value = int.from_bytes(reader.read(1), byteorder = 'little', signed = False)
 
 class INT8:
 	def __init__(self, reader):
@@ -133,8 +137,7 @@ class LONGLONG:
 
 class LONG_PTR(POINTER):
 	def __init__(self, reader):
-		super().__init__(LONG)
-		self.value = reader.read_uint()
+		super().__init__(reader, LONG)
 
 class LONG32:
 	def __init__(self, reader):
@@ -146,33 +149,16 @@ class LONG64():
 
 class LPARAM(POINTER):
 	def __init__(self, reader):
-		super().__init__(LONG)
-		self.value = reader.read_uint()
+		super().__init__(reader, LONG)
 
 class LPBOOL(POINTER):
 	def __init__(self, reader):
-		super().__init__(BOOL)
-		self.value = reader.read_uint()
+		super().__init__(reader, BOOL)
 
 class LPBYTE(POINTER):
 	def __init__(self, reader):
-		super().__init__(BYTE)
-		self.value = reader.read_uint()	
-"""
-class LPCSTR(POINTER):
-	def __init__(self, reader):
-		super().__init__(STR)
-		self.value = reader.read_uint()			
-		
-class LPCTSTR(POINTER):
-	def __init__(self, reader):
-		super().__init__(LPCTSTR)
-		self.value = reader.read_uint()	
-	
-class STR:
-	def __init__(self, reader):
-		self.value = reader.read_uint()			
-"""	
+		super().__init__(reader, BYTE)
+
 class ULONG:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
@@ -191,13 +177,11 @@ class ULONG64:
 		
 class PWSTR(POINTER):
 	def __init__(self, reader):
-		super().__init__(None)
-		self.value = reader.read_uint()
+		super().__init__(reader, None)
 		
 class PCHAR(POINTER):
 	def __init__(self, reader):
-		super().__init__(CHAR)
-		self.value = reader.read_uint()
+		super().__init__(reader, CHAR)
 		
 class USHORT:
 	def __init__(self, reader):

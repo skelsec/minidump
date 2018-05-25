@@ -96,7 +96,6 @@ class MinidumpBufferedReader:
 		if offset == 0:
 			return
 		offset_to_aligned = (alignment - offset) % alignment
-		print('Moving position with offset %d' % offset_to_aligned)
 		self.seek(offset_to_aligned, 1)
 		return
 		
@@ -194,7 +193,7 @@ class MinidumpBufferedReader:
 		
 		return pos_s[0]
 		
-	def finad_all_global(self, pattern):
+	def find_all_global(self, pattern):
 		"""
 		Searches for the pattern in the whole process memory space and returns a list of addresses where the pattern begins.
 		This is exhaustive!
@@ -212,15 +211,13 @@ class MinidumpBufferedReader:
 			self.move(pos)
 			ptr = int.from_bytes(self.read(4), byteorder = 'little', signed = True)
 			return pos + 4 + ptr
-			#raw_data = self.read(pos, self.sizeof_long)
-			#ptr = struct.unpack(self.unpack_long, raw_data)[0]
-			#return pos + self.sizeof_long + ptr
 		else:
 			self.move(pos)
 			return self.read_uint()
-			#raw_data = self.read(pos, self.sizeof_long)
-			#return struct.unpack(self.unpack_long, raw_data)[0]
-		
+	
+	def find_in_module(self, module_name, pattern):
+		t = self.reader.search_module(module_name, pattern)
+		return t
 		
 			
 		

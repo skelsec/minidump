@@ -224,7 +224,7 @@ class MinidumpFile:
 			
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.FunctionTableStream:
 				logging.debug('Found FunctionTableStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				logging.warning('Parsing of this stream type is not yet implemented!')
+				logging.debug('Parsing of this stream type is not yet implemented!')
 				continue
 			
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.UnloadedModuleListStream:
@@ -249,20 +249,20 @@ class MinidumpFile:
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.SystemMemoryInfoStream:
 				logging.debug('Found SystemMemoryInfoStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				logging.warning('SystemMemoryInfoStream parsing is not implemented (Missing documentation)')
+				logging.debug('SystemMemoryInfoStream parsing is not implemented (Missing documentation)')
 				continue
 				
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.JavaScriptDataStream:
 				logging.debug('Found JavaScriptDataStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				logging.warning('JavaScriptDataStream parsing is not implemented (Missing documentation)')
+				logging.debug('JavaScriptDataStream parsing is not implemented (Missing documentation)')
 				
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ProcessVmCountersStream:
 				logging.debug('Found ProcessVmCountersStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				logging.warning('ProcessVmCountersStream parsing is not implemented (Missing documentation)')
+				logging.debug('ProcessVmCountersStream parsing is not implemented (Missing documentation)')
 				
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.TokenStream:
 				logging.debug('Found TokenStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				logging.warning('TokenStream parsing is not implemented (Missing documentation)')
+				logging.debug('TokenStream parsing is not implemented (Missing documentation)')
 				
 			else:
 				logging.debug('Found Unknown Stream! Type: %s @%x Size: %d' % (dir.StreamType.name, dir.Location.Rva, dir.Location.DataSize))
