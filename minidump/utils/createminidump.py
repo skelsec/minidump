@@ -7,7 +7,7 @@ import logging
 import struct
 
 from ctypes.wintypes import HANDLE, BOOL, DWORD, HWND, HINSTANCE, HKEY, LPVOID, LPWSTR, PBOOL
-from ctypes import c_ulong, c_char_p, c_int, c_void_p, WinError, get_last_error
+from ctypes import c_ulong, c_char_p, c_int, c_void_p, WinError, get_last_error, windll
 
 from privileges import enable_debug_privilege
 
@@ -120,6 +120,12 @@ FILE_ATTRIBUTE_REPARSE_POINT = 0x400
 GENERIC_READ = 0x80000000
 FILE_READ_ATTRIBUTES = 0x80
 
+PROCESS_QUERY_INFORMATION = 0x0400
+PROCESS_VM_READ = 0x0010
+
+MAX_PATH = 260
+
+
 """
 class SECURITY_ATTRIBUTES(ctypes.Structure):
     _fields_ = (
@@ -129,6 +135,14 @@ class SECURITY_ATTRIBUTES(ctypes.Structure):
         )
 LPSECURITY_ATTRIBUTES = ctypes.POINTER(SECURITY_ATTRIBUTES)	
 """
+Psapi = windll.psapi
+GetProcessImageFileName = Psapi.GetProcessImageFileNameA
+GetProcessImageFileName.restype = ctypes.wintypes.DWORD
+QueryFullProcessImageName = ctypes.windll.kernel32.QueryFullProcessImageNameA
+QueryFullProcessImageName.restype = ctypes.wintypes.DWORD
+EnumProcesses = Psapi.EnumProcesses
+EnumProcesses.restype = ctypes.wintypes.DWORD
+
 LPSECURITY_ATTRIBUTES = LPVOID #we dont pass this for now
 # https://msdn.microsoft.com/en-us/library/windows/desktop/aa363858(v=vs.85).aspx
 CreateFile = ctypes.windll.kernel32.CreateFileW
@@ -176,6 +190,48 @@ def is64bitProc(process_handle):
 		logging.warning('Failed to get process version info!')
 		WinError(get_last_error())
 	return not bool(is64.value)
+	
+# https://waitfordebug.wordpress.com/2012/01/27/pid-enumeration-on-windows-with-pure-python-ctypes/
+def enum_pids():
+	
+	max_array = c_ulong * 4096 # define long array to capture all the processes
+	pProcessIds = max_array() # array to store the list of processes
+	pBytesReturned = c_ulong() # the number of bytes returned in the array
+	#EnumProcess 
+	res = EnumProcesses(
+		ctypes.byref(pProcessIds),
+		ctypes.sizeof(pProcessIds),
+		ctypes.byref(pBytesReturned)
+	)
+	if res == 0:
+		logging.error(WinError(get_last_error()))
+		return []
+  
+	# get the number of returned processes
+	nReturned = int(pBytesReturned.value/ctypes.sizeof(c_ulong()))
+	return [i for i in pProcessIds[:nReturned]]
+	
+#https://msdn.microsoft.com/en-us/library/windows/desktop/ms683217(v=vs.85).aspx
+def enum_process_names():
+	pid_to_name = {}
+	
+	for pid in enum_pids():
+		pid_to_name[pid] = 'Not found'
+		process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
+		if process_handle is None:
+			logging.debug('[Enum Processes]Failed to open process PID: %d Reason: %s ' % (pid, WinError(get_last_error())))
+			continue
+		
+		image_name = (ctypes.c_char*MAX_PATH)()
+		max_path = DWORD(4096)
+		#res = GetProcessImageFileName(process_handle, image_name, MAX_PATH)
+		res = QueryFullProcessImageName(process_handle, 0 ,image_name, ctypes.byref(max_path))
+		if res == 0:
+			logging.debug('[Enum Proceses]Failed GetProcessImageFileName on PID: %d Reason: %s ' % (pid, WinError(get_last_error())))
+			continue
+		
+		pid_to_name[pid] = image_name.value.decode()
+	return pid_to_name
 
 def create_dump(pid, output_filename, mindumptype, with_debug = False):
 	if with_debug:
@@ -210,25 +266,63 @@ def create_dump(pid, output_filename, mindumptype, with_debug = False):
 	CloseHandle(file_handle)
 	CloseHandle(process_handle)
 	
-	
-if __name__=='__main__':
+def main():
 	import argparse
 
 	parser = argparse.ArgumentParser(description='Tool to create process dumps using windows API')
-	parser.add_argument('pid', type=int, help='PID of the process')
-	parser.add_argument('outputfile', help='file to write the dumps to')
 	parser.add_argument('-d', '--with-debug', action='store_true', help='enable SeDebugPrivilege, use this if target process is not in the same user context as your script')
-	parser.add_argument('-v', '--verbose', action='count', default=0)
+	parser.add_argument('-v', '--verbose', action='count', default=0, help = 'verbosity, add more - see more')
+	
+	subparsers = parser.add_subparsers(help = 'commands')
+	subparsers.required = True
+	subparsers.dest = 'command'
+	enumerate_group = subparsers.add_parser('enum', help='Enumerate running processes')
+	dump_group = subparsers.add_parser('dump', help = 'Dump running process')
+	target_group = dump_group.add_mutually_exclusive_group(required=True)
+	target_group.add_argument('-p', '--pid', type=int, help='PID of process to dump')
+	target_group.add_argument('-n', '--name', help='Name of process to dump')
+	dump_group.add_argument('-o', '--outfile', help='Output .dmp file name', required = True)
 	
 	args = parser.parse_args()
+	
 	if args.verbose == 0:
 		logging.basicConfig(level=logging.INFO)
 	elif args.verbose == 1:
 		logging.basicConfig(level=logging.DEBUG)
 	else:
 		logging.basicConfig(level=1)
-
+		
 	mindumptype = MINIDUMP_TYPE.MiniDumpNormal | MINIDUMP_TYPE.MiniDumpWithFullMemory
-	create_dump(args.pid, args.outputfile, mindumptype, with_debug = args.with_debug)
+		
+	if args.with_debug:
+		logging.debug('Enabling SeDebugPrivilege')
+		assigned = enable_debug_privilege()
+		msg = ['failure', 'success'][assigned]
+		logging.debug('SeDebugPrivilege assignment %s' % msg)
+	
+	if args.command == 'enum':
+		pid_to_name = enum_process_names()
+		t = [p for p in pid_to_name]
+		t.sort()
+		for pid in t:
+			logging.info('PID: %d Name: %s' % (pid, pid_to_name[pid]))
+		return
+		
+	if args.command == 'dump':
+		if args.pid:
+			logging.info('Dumpig process PID %d' % args.pid)
+			create_dump(args.pid, args.outfile, mindumptype, with_debug = args.with_debug)
+		
+		if args.name:
+			pid_to_name = enum_process_names()
+			for pid in pid_to_name:
+				if pid_to_name[pid].find(args.name) != -1:
+					logging.info('Dumpig process PID %d' % pid)
+					create_dump(pid, args.outfile, mindumptype, with_debug = args.with_debug)
+					return
+			logging.info('Failed to find process by name!')
+			
+if __name__=='__main__':
+	main()
 
 	

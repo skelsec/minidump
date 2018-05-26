@@ -24,8 +24,13 @@ setup(
 	zip_safe = True,
 	#
 	# license="LICENSE.txt",
-	description="minidump",
+	description="Python library to parse Windows minidump file format",
 
 	# long_description=open("README.txt").read(),
 	python_requires='>=3.6',
+	classifiers=(
+        "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ),
 )
