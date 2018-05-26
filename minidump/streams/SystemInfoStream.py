@@ -6,6 +6,7 @@
 
 import io
 import enum
+import logging
 from minidump.common_structs import * 
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
@@ -174,7 +175,11 @@ class MinidumpSystemInfo:
 		t.FeatureInformation = si.FeatureInformation
 		t.AMDExtendedCpuFeatures = si.AMDExtendedCpuFeatures
 		t.ProcessorFeatures = si.ProcessorFeatures
-		t.guess_os()
+		try:
+			t.guess_os()
+		except Exception as e:
+			logging.log(1, 'Failed to guess OS! MajorVersion: %s MinorVersion %s BuildNumber %s ProductType: %s' % (t.MajorVersion, t.MinorVersion, t.BuildNumber, t.ProductType ))
+			t.OperatingSystem = None
 		return t
 		
 	
