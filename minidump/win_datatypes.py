@@ -39,6 +39,10 @@ class BOOLEAN:
 class BYTE:
 	def __init__(self, reader):
 		self.value = reader.read(1)
+		
+class PBYTE(POINTER):
+	def __init__(self, reader):
+		super().__init__(reader, BYTE)
 
 class CCHAR:
 	def __init__(self, reader):
@@ -47,6 +51,10 @@ class CCHAR:
 class CHAR:
 	def __init__(self, reader):
 		self.value = reader.read(1).decode('ascii')
+		
+class UCHAR:
+	def __init__(self, reader):
+		self.value = int.from_bytes(reader.read(1), byteorder = 'little', signed = False)
 
 class WORD:
 	def __init__(self, reader):
@@ -186,3 +194,35 @@ class PCHAR(POINTER):
 class USHORT:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = False)
+		
+class SHORT:
+	def __init__(self, reader):
+		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = True)
+		
+#https://msdn.microsoft.com/en-us/library/windows/hardware/ff554296(v=vs.85).aspx
+class LIST_ENTRY:
+	def __init__(self, reader, finaltype = None):
+		self.Flink = POINTER(reader, finaltype)
+		self.Blink = POINTER(reader, finaltype)
+		
+class FILETIME:
+	def __init__(self, reader):
+		self.dwLowDateTime = DWORD(reader)
+		self.dwHighDateTime = DWORD(reader)
+		self.value = (self.dwHighDateTime.value << 32) + self.dwLowDateTime.value
+		
+class PUCHAR(POINTER):
+	def __init__(self, reader):
+		super().__init__(reader, UCHAR)
+		
+class PCWSTR(POINTER):
+	def __init__(self, reader):
+		super().__init__(reader, None)
+		
+class SIZE_T:
+	def __init__(self, reader):
+		self.value = reader.read_uint()
+		
+		
+
+		
