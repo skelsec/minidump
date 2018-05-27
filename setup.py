@@ -5,7 +5,7 @@ setup(
 	name="minidump",
 
 	# Version number (initial):
-	version="0.0.1",
+	version="0.0.3",
 
 	# Application author details:
 	author="Tamas Jos",
@@ -25,6 +25,7 @@ setup(
 	#
 	# license="LICENSE.txt",
 	description="Python library to parse Windows minidump file format",
+	long_description="Python library to parse Windows minidump file format",
 
 	# long_description=open("README.txt").read(),
 	python_requires='>=3.6',

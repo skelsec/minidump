@@ -14,6 +14,9 @@ class MinidumpModule:
 		self.endaddress = None
 		
 		self.versioninfo = None
+		self.checksum = None
+		self.timestamp = None
+		
 		
 	def parse(mod, buff):
 		"""
