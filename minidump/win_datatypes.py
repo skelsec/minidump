@@ -23,6 +23,16 @@ class POINTER:
 			data = self.finaltype(reader)
 		reader.move(pos)
 		return data
+	
+	def read_raw(self, reader, size ):
+		#we do not know the finaltype, just want the data
+		if self.value == 0:
+			return None
+		pos = reader.tell()
+		reader.move(self.value)
+		data = reader.read(size)
+		reader.move(pos)
+		return data
 		
 class PVOID(POINTER):
 	def __init__(self, reader):
