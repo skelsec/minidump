@@ -9,6 +9,7 @@ import enum
 import struct
 import logging
 
+from .exceptions import *
 from .minidumpreader import *
 from .common_structs import *
 from .streams import *
@@ -97,7 +98,9 @@ class MinidumpHeader:
 	@staticmethod
 	def parse(buff):
 		mh = MinidumpHeader()
-		mh.Signature = buff.read(4)
+		mh.Signature = buff.read(4).decode()[::-1]
+		if mh.Signature != 'PMDM':
+			raise MinidumpHeaderSignatureMismatchException(mh.Signature)
 		mh.Version = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
 		mh.ImplementationVersion = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
 		mh.NumberOfStreams = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -105,7 +108,10 @@ class MinidumpHeader:
 		mh.CheckSum = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mh.Reserved = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mh.TimeDateStamp = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		mh.Flags = MINIDUMP_TYPE(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
+		try:
+			mh.Flags = MINIDUMP_TYPE(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
+		except Exception as e:
+			raise MinidumpHeaderFlagsException('Could not parse header flags!')
 			
 		return mh
 		

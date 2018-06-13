@@ -33,6 +33,9 @@ class MinidumpModule:
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
 		
+	def inrange(self, memory_loc):
+		return self.baseaddress <= memory_loc < self.endaddress
+		
 	def __str__(self):
 		return 'Module name: %s BaseAddress: 0x%08x Size: 0x%x Endaddress: 0x%08x' % (self.name, self.baseaddress, self.size, self.endaddress)
 		
