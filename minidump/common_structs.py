@@ -117,6 +117,22 @@ class MinidumpMemorySegment:
 				
 		return fl
 		
+	def get_header():
+		t = [
+			'VA Start',
+			'RVA',
+			'Size',
+		]
+		return t
+	
+	def to_row(self):
+		t = [
+			hex(self.start_virtual_address),
+			hex(self.start_file_address),
+			hex(self.size)
+		]
+		return t
+		
 	def __str__(self):
 		t = 'VA Start: %s, RVA: %s, Size: %s' % (hex(self.start_virtual_address), hex(self.start_file_address), hex(self.size))
 		return t
@@ -164,7 +180,35 @@ def hexdump( src, length=16, sep='.', start = 0):
 			else:
 				text += sep;
 		if start == 0:
-			result.append(('%08X:  %-'+str(length*(2+1)+1)+'s  |%s|') % (i, hexa, text));
+			result.append(('%08x:  %-'+str(length*(2+1)+1)+'s  |%s|') % (i, hexa, text));
 		else:
-			result.append(('%08X+%08X:  %-'+str(length*(2+1)+1)+'s  |%s|') % (start, i, hexa, text));
+			result.append(('%08x(+%04x):  %-'+str(length*(2+1)+1)+'s  |%s|') % (start+i, i, hexa, text));
 	return '\n'.join(result);
+	
+def construct_table(lines, separate_head=True):
+	"""Prints a formatted table given a 2 dimensional array"""
+	#Count the column width
+	widths = []
+	for line in lines:
+			for i,size in enumerate([len(x) for x in line]):
+					while i >= len(widths):
+							widths.append(0)
+					if size > widths[i]:
+							widths[i] = size
+       
+	#Generate the format string to pad the columns
+	print_string = ""
+	for i,width in enumerate(widths):
+			print_string += "{" + str(i) + ":" + str(width) + "} | "
+	if (len(print_string) == 0):
+			return
+	print_string = print_string[:-3]
+       
+	#Print the actual data
+	t = ''
+	for i,line in enumerate(lines):
+			t += print_string.format(*line) + '\n'
+			if (i == 0 and separate_head):
+					t += "-"*(sum(widths)+3*(len(widths)-1)) + '\n'
+					
+	return t

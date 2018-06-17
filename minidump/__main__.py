@@ -6,11 +6,13 @@
 
 import logging
 from minidump.minidumpfile import MinidumpFile
+from minidump.common_structs import hexdump
 
-if __name__ == '__main__':
+
+def run():
 	import argparse
 
-	parser = argparse.ArgumentParser(description='Pure Python implementation of Mimikatz -currently only minidump-')
+	parser = argparse.ArgumentParser(description='A parser for minidumnp files')
 	parser.add_argument('minidumpfile', help='path to the minidump file of lsass.exe')
 	parser.add_argument('-v', '--verbose', action='count', default=0)
 	parser.add_argument('--modules', action='store_true', help='List modules')
@@ -21,6 +23,8 @@ if __name__ == '__main__':
 	parser.add_argument('--handles', action='store_true', help='List handles')
 	parser.add_argument('--misc', action='store_true', help='Show misc info')
 	parser.add_argument('--all', action='store_true', help='Show all info')
+	parser.add_argument('-r', '--read-addr', type=lambda x: int(x,0), help='Dump a memory region from the process\'s addres space')
+	parser.add_argument('-s', '--read-size', type=lambda x: int(x,0), default = 0x20, help='Dump a memory region from the process\'s addres space')
 	
 	args = parser.parse_args()
 	if args.verbose == 0:
@@ -66,3 +70,14 @@ if __name__ == '__main__':
 	if args.all or args.misc:
 		if mf.misc_info is not None:
 			print(str(mf.misc_info))
+			
+	if args.read_addr:
+		buff_reader = reader.get_buffered_reader()
+		buff_reader.move(args.read_addr)
+		data = buff_reader.peek(args.read_size)
+		print(hexdump(data, start = args.read_addr))
+		
+
+
+if __name__ == '__main__':
+	run()

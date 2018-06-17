@@ -36,6 +36,23 @@ class MinidumpModule:
 	def inrange(self, memory_loc):
 		return self.baseaddress <= memory_loc < self.endaddress
 		
+	def get_header():
+		return [
+			'Module name',
+			'BaseAddress',
+			'Size',
+			'Endaddress',
+		]
+	
+	def to_row(self):
+		return [
+			str(self.name),
+			'0x%08x' % self.baseaddress,
+			hex(self.size),
+			'0x%08x' % self.endaddress,
+		]
+		
+		
 	def __str__(self):
 		return 'Module name: %s BaseAddress: 0x%08x Size: 0x%x Endaddress: 0x%08x' % (self.name, self.baseaddress, self.size, self.endaddress)
 		
@@ -131,9 +148,14 @@ class MinidumpModuleList:
 			t.modules.append(MinidumpModule.parse(mod, buff))
 		return t
 		
-	def __str__(self):
-		t  = '== MinidumpModuleList ==\n'
+	def to_table(self):
+		t = []
+		t.append(MinidumpModule.get_header())
 		for mod in self.modules:
-			t+= str(mod) + '\n'
+			t.append(mod.to_row())
+		return t
+		
+	def __str__(self):
+		t  = '== ModuleList ==\n' + construct_table(self.to_table())
 		return t
 		

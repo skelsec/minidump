@@ -133,9 +133,28 @@ class MinidumpMemoryInfo:
 		mmi.Type = t.Type
 		return mmi
 		
-	def __str__(self):
-		return 'BaseAddress: %x AllocationBase: %x AllocationProtect: %s RegionSize: %x State: %s Protect: %s Type: %s' % \
-			(self.BaseAddress, self.AllocationBase, self.AllocationProtect, self.RegionSize, self.State, self.Protect, self.Type)
+	def get_header():
+		t = [
+			'BaseAddress',
+			'AllocationBase',
+			'AllocationProtect',
+			'RegionSize',
+			'State',
+			'Protect',
+			'Type',
+		]
+		return t
+	def to_row(self):
+		t = [
+			hex(self.BaseAddress),
+			hex(self.AllocationBase),
+			str(self.AllocationProtect),
+			hex(self.RegionSize),
+			self.State.name if self.State else 'N/A',
+			self.Protect.name if self.Protect else 'N/A',
+			self.Type.name if self.Type else 'N/A',
+		]
+		return t
 		
 		
 class MinidumpMemoryInfoList:
@@ -154,9 +173,13 @@ class MinidumpMemoryInfoList:
 			t.infos.append(MinidumpMemoryInfo.parse(mi, buff))
 		
 		return t
+		
+	def to_table(self):
+		t = []
+		t.append(MinidumpMemoryInfo.get_header())
+		for info in self.infos:
+			t.append(info.to_row())
+		return t
 	
 	def __str__(self):
-		t  = '== MinidumpMemoryInfoList ==\n'
-		for info in self.infos:
-			t+= str(info) + '\n' 
-		return t
+		return '== MinidumpMemoryInfoList ==\n' + construct_table(self.to_table())

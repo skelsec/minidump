@@ -90,6 +90,34 @@ class MinidumpThreadInfo:
 		mti.Affinity = t.Affinity
 		return mti
 		
+	def get_header():
+		return [
+			'ThreadId',
+			'DumpFlags',
+			'DumpError',
+			'ExitStatus',
+			'CreateTime',
+			'ExitTime',
+			'KernelTime',
+			'UserTime',
+			'StartAddress',
+			'Affinity',
+		]
+	
+	def to_row(self):
+		return [
+			hex(self.ThreadId),
+			str(self.DumpFlags),
+			str(self.DumpError),
+			hex(self.ExitStatus),
+			str(self.CreateTime),
+			str(self.ExitTime),
+			str(self.KernelTime),
+			str(self.UserTime),
+			hex(self.StartAddress),
+			str(self.Affinity),
+		]
+		
 	def __str__(self):
 		return 'ThreadId: %x DumpFlags: %s DumpError: %s ExitStatus: %x CreateTime: %s ExitTime: %s KernelTime: %s UserTime: %s StartAddress: %x Affinity: %d' % \
 			(self.ThreadId, self.DumpFlags, self.DumpError, self.ExitStatus, self.CreateTime, self.ExitTime, self.KernelTime, self.UserTime, self.StartAddress, self.Affinity)
@@ -110,9 +138,14 @@ class MinidumpThreadInfoList:
 			t.infos.append(MinidumpThreadInfo.parse(mi, buff))
 		
 		return t
-	
-	def __str__(self):
-		t  = '== MinidumpMemoryInfoList ==\n'
+		
+	def to_table(self):
+		t = []
+		t.append(MinidumpThreadInfo.get_header())
 		for info in self.infos:
-			t+= str(info) + '\n' 
+			t.append(info.to_row())
 		return t
+		
+	def __str__(self):
+		return '== ThreadInfoList ==\n' + construct_table(self.to_table())	
+	

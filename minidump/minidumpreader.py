@@ -4,6 +4,7 @@
 #  Tamas Jos (@skelsec)
 #
 import struct
+import ntpath
 from .common_structs import * 
 from .streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
@@ -248,7 +249,7 @@ class MinidumpFileReader:
 	
 	def get_module_by_name(self, module_name):
 		for mod in self.modules:
-			if mod.name.find(module_name) != -1:
+			if ntpath.basename(mod.name).find(module_name) != -1:
 				return mod
 		return None
 	

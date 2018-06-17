@@ -44,6 +44,28 @@ class MINIDUMP_THREAD_EX:
 		mte.BackingStore = MINIDUMP_MEMORY_DESCRIPTOR.parse(buff)
 		return mte
 		
+	def get_header():
+		return [
+			'ThreadId',
+			'SuspendCount',
+			'PriorityClass',
+			'Priority',
+			'Teb',
+			#'Stack',
+			#'ThreadContext',
+		]
+	
+	def to_row(self):
+		return [
+			hex(self.ThreadId),
+			str(self.SuspendCount),
+			str(self.PriorityClass),
+			str(self.Priority),
+			hex(self.Teb),
+			#self.Stack,
+			#self.ThreadContext,
+		]
+		
 		
 class MinidumpThreadExList:
 	def __init__(self):
@@ -56,3 +78,14 @@ class MinidumpThreadExList:
 		mtl = MINIDUMP_THREAD_EX.parse(chunk)
 		t.threads = mtl.Threads
 		return t
+	
+	def to_table(self):
+		t = []
+		t.append(MINIDUMP_THREAD_EX.get_header())
+		for thread in self.threads:
+			t.append(thread.to_row())
+		return t
+		
+	def __str__(self):
+		return '== ThreadExList ==\n' + construct_table(self.to_table())	
+	

@@ -43,6 +43,28 @@ class MINIDUMP_THREAD:
 		
 		return mt
 		
+	def get_header():
+		return [
+			'ThreadId',
+			'SuspendCount',
+			'PriorityClass',
+			'Priority',
+			'Teb',
+			#'Stack',
+			#'ThreadContext',
+		]
+	
+	def to_row(self):
+		return [
+			hex(self.ThreadId),
+			str(self.SuspendCount),
+			str(self.PriorityClass),
+			str(self.Priority),
+			hex(self.Teb),
+			#self.Stack,
+			#self.ThreadContext,
+		]
+		
 class MinidumpThreadList:
 	def __init__(self):
 		self.threads = []
@@ -54,3 +76,13 @@ class MinidumpThreadList:
 		mtl = MINIDUMP_THREAD_LIST.parse(chunk)
 		t.threads = mtl.Threads
 		return t
+		
+	def to_table(self):
+		t = []
+		t.append(MINIDUMP_THREAD.get_header())
+		for thread in self.threads:
+			t.append(thread.to_row())
+		return t
+		
+	def __str__(self):
+		return 'ThreadList\n' + construct_table(self.to_table())

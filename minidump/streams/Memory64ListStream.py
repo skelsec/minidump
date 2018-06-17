@@ -65,8 +65,13 @@ class MinidumpMemory64List:
 			rva += mod.DataSize
 		return t
 		
-	def __str__(self):
-		t  = '== MinidumpMemory64List ==\n'
+	def to_table(self):
+		t = []
+		t.append(MinidumpMemorySegment.get_header())
 		for mod in self.memory_segments:
-			t+= str(mod) + '\n'
+			t.append(mod.to_row())
 		return t
+		
+	def __str__(self):
+		return '== MinidumpMemory64List ==\n' + construct_table(self.to_table())
+	
