@@ -39,9 +39,23 @@ class MINIDUMP_STREAM_TYPE(enum.Enum):
 	JavaScriptDataStream = 20
 	SystemMemoryInfoStream = 21
 	ProcessVmCountersStream = 22
+	ThreadNamesStream = 24
+	ceStreamNull = 25
+	ceStreamSystemInfo = 26
+	ceStreamException = 27
+	ceStreamModuleList = 28
+	ceStreamProcessList = 29
+	ceStreamThreadList = 30
+	ceStreamThreadContextList = 31
+	ceStreamThreadCallStackList = 32
+	ceStreamMemoryVirtualList = 33
+	ceStreamMemoryPhysicalList = 34
+	ceStreamBucketParameters = 35
+	ceStreamProcessModuleMap = 36
+	ceStreamDiagnosisList = 37
 	LastReservedStream		 = 0xffff
-	
-class MINIDUMP_TYPE(enum.IntFlag): 
+
+class MINIDUMP_TYPE(enum.IntFlag):
 	MiniDumpNormal						  = 0x00000000
 	MiniDumpWithDataSegs					= 0x00000001
 	MiniDumpWithFullMemory				  = 0x00000002
@@ -65,19 +79,19 @@ class MINIDUMP_TYPE(enum.IntFlag):
 	MiniDumpWithModuleHeaders			   = 0x00080000
 	MiniDumpFilterTriage					= 0x00100000
 	MiniDumpValidTypeFlags				  = 0x001fffff
-		
+
 class MINIDUMP_DIRECTORY:
 	def __init__(self):
 		self.StreamType = None
 		self.Location = None
-	
+
 	@staticmethod
 	def parse(buff):
 		md = MINIDUMP_DIRECTORY()
 		md.StreamType = MINIDUMP_STREAM_TYPE(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
 		md.Location = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		return md
-		
+
 	def __str__(self):
 		t = 'StreamType: %s %s' % (self.StreamType, self.Location)
 		return t
@@ -94,7 +108,7 @@ class MinidumpHeader:
 		self.Reserved = None
 		self.TimeDateStamp = None
 		self.Flags = None
-		
+
 	@staticmethod
 	def parse(buff):
 		mh = MinidumpHeader()
@@ -112,9 +126,9 @@ class MinidumpHeader:
 			mh.Flags = MINIDUMP_TYPE(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 		except Exception as e:
 			raise MinidumpHeaderFlagsException('Could not parse header flags!')
-			
+
 		return mh
-		
+
 	def __str__(self):
 		t = '== MinidumpHeader ==\n'
 		t+= 'Signature: %s\n' % self.Signature
@@ -126,7 +140,7 @@ class MinidumpHeader:
 		t+= 'Reserved: %s\n' % self.Reserved
 		t+= 'TimeDateStamp: %s\n' % self.TimeDateStamp
 		t+= 'Flags: %s\n' % self.Flags
-		return t		
+		return t
 
 class MinidumpFile:
 	def __init__(self):
@@ -134,7 +148,7 @@ class MinidumpFile:
 		self.file_handle = None
 		self.header = None
 		self.directories = []
-		
+
 		self.threads_ex = None
 		self.threads = None
 		self.modules = None
@@ -149,7 +163,7 @@ class MinidumpFile:
 		self.memory_info = None
 		self.thread_info = None
 
-		
+
 	@staticmethod
 	def parse(filename):
 		mf = MinidumpFile()
@@ -157,21 +171,21 @@ class MinidumpFile:
 		mf.file_handle = open(filename, 'rb')
 		mf._parse()
 		return mf
-		
+
 	def get_reader(self):
 		return MinidumpFileReader(self)
-		
+
 	def _parse(self):
 		self.__parse_header()
 		self.__parse_directories()
-			
+
 	def __parse_header(self):
 		self.header = MinidumpHeader.parse(self.file_handle)
 		for i in range(0, self.header.NumberOfStreams):
 			self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
 			self.directories.append(MINIDUMP_DIRECTORY.parse(self.file_handle))
-	
-			
+
+
 	def __parse_directories(self):
 		for dir in self.directories:
 			if dir.StreamType == MINIDUMP_STREAM_TYPE.UnusedStream:
@@ -227,12 +241,12 @@ class MinidumpFile:
 				self.handles = MinidumpHandleDataStream.parse(dir, self.file_handle)
 				#logging.debug(str(self.handles))
 				continue
-			
+
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.FunctionTableStream:
 				logging.debug('Found FunctionTableStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				logging.debug('Parsing of this stream type is not yet implemented!')
 				continue
-			
+
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.UnloadedModuleListStream:
 				logging.debug('Found UnloadedModuleListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				self.unloaded_modules = MinidumpUnloadedModuleList.parse(dir, self.file_handle)
@@ -257,28 +271,28 @@ class MinidumpFile:
 				logging.debug('Found SystemMemoryInfoStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				logging.debug('SystemMemoryInfoStream parsing is not implemented (Missing documentation)')
 				continue
-				
+
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.JavaScriptDataStream:
 				logging.debug('Found JavaScriptDataStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				logging.debug('JavaScriptDataStream parsing is not implemented (Missing documentation)')
-				
+
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ProcessVmCountersStream:
 				logging.debug('Found ProcessVmCountersStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				logging.debug('ProcessVmCountersStream parsing is not implemented (Missing documentation)')
-				
+
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.TokenStream:
 				logging.debug('Found TokenStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				logging.debug('TokenStream parsing is not implemented (Missing documentation)')
-				
+
 			else:
 				logging.debug('Found Unknown Stream! Type: %s @%x Size: %d' % (dir.StreamType.name, dir.Location.Rva, dir.Location.DataSize))
-				
+
 			"""
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.HandleOperationListStream:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ExceptionStream:
-			"""			
-		
+			"""
+
 	def __str__(self):
 		t = '== Minidump File ==\n'
 		t += str(self.header)
@@ -289,5 +303,5 @@ class MinidumpFile:
 			t += str(mod) + '\n'
 		for segment in self.memorysegments:
 			t+= str(segment) + '\n'
-		
+
 		return t
