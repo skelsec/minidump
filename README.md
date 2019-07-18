@@ -9,7 +9,8 @@ Python >= 3.6
 See help for possible options.
 
 # Advanced usage
-You should be using the buffered reader object, help will come later :)
+After parsing the minidump file, you can use the MinidumpFileReader and MinidumpBufferedReader objects to perform various searches/reads in the dumped process' address space.  
+Those objects will be able to read and search the VA of the dumped process and have a notion on integer sizes based on the CPU arch.
 
 # Creating minidump file
 The ```createminidump.py``` script in the utils folder uses the Windows API to create minidump files. This script can also dump processes running on a different user context by enabling ```SeDebugPrivilege```.  
