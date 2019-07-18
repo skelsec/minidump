@@ -15,6 +15,7 @@ def run():
 	parser = argparse.ArgumentParser(description='A parser for minidumnp files')
 	parser.add_argument('minidumpfile', help='path to the minidump file of lsass.exe')
 	parser.add_argument('-v', '--verbose', action='count', default=0)
+	parser.add_argument('--header', action='store_true', help='File header info')
 	parser.add_argument('--modules', action='store_true', help='List modules')
 	parser.add_argument('--threads', action='store_true', help='List threads')
 	parser.add_argument('--memory', action='store_true', help='List memory')
@@ -70,6 +71,8 @@ def run():
 	if args.all or args.misc:
 		if mf.misc_info is not None:
 			print(str(mf.misc_info))
+	if args.all or args.header:
+		print(str(mf.header))
 			
 	if args.read_addr:
 		buff_reader = reader.get_buffered_reader()

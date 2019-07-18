@@ -66,8 +66,8 @@ class MinidumpMemorySegment:
 		"""
 		mms = MinidumpMemorySegment()
 		mms.start_virtual_address = memory_decriptor.StartOfMemoryRange
-		mms.size = memory_decriptor.Memory.DataSize
-		mms.start_file_address = memory_decriptor.Memory.Rva
+		mms.size = memory_decriptor.DataSize
+		mms.start_file_address = memory_decriptor.Rva
 		mms.end_virtual_address = mms.start_virtual_address + mms.size
 		return mms
 		

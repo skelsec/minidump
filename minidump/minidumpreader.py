@@ -226,8 +226,15 @@ class MinidumpBufferedReader:
 class MinidumpFileReader:
 	def __init__(self, minidumpfile):
 		self.modules = minidumpfile.modules.modules
-		self.memory_segments = minidumpfile.memory_segments_64.memory_segments
 		self.sysinfo = minidumpfile.sysinfo
+		
+		if minidumpfile.memory_segments_64:
+			self.memory_segments = minidumpfile.memory_segments_64.memory_segments
+			self.is_fulldump = True
+		
+		else:
+			self.memory_segments = minidumpfile.memory_segments.memory_segments
+			self.is_fulldump = False
 		
 		self.filename = minidumpfile.filename
 		self.file_handle = minidumpfile.file_handle
