@@ -21,6 +21,7 @@ def run():
 	parser.add_argument('--memory', action='store_true', help='List memory')
 	parser.add_argument('--sysinfo', action='store_true', help='Show sysinfo')
 	parser.add_argument('--comments', action='store_true', help='Show comments')
+	parser.add_argument('--exception', action='store_true', help='Show exception records')
 	parser.add_argument('--handles', action='store_true', help='List handles')
 	parser.add_argument('--misc', action='store_true', help='Show misc info')
 	parser.add_argument('--all', action='store_true', help='Show all info')
@@ -60,6 +61,9 @@ def run():
 	if args.all or args.sysinfo:
 		if mf.sysinfo is not None:
 			print(str(mf.sysinfo))
+	if args.all or args.exception:
+		if mf.exception is not None:
+			print(str(mf.exception))
 	if args.all or args.comments:
 		if mf.comment_a is not None:
 			print(str(mf.comment_a))

@@ -24,7 +24,7 @@ from .UnloadedModuleListStream import *
 
 __CommentStreamA__ = ['CommentStreamA']
 __CommentStreamW__ = ['CommentStreamW']
-__ExceptionStream__ = []
+__ExceptionStream__ = ['ExceptionList']
 __FunctionTableStream__ = ['MINIDUMP_FUNCTION_TABLE_STREAM']
 __HandleDataStream__ = ['MinidumpHandleDataStream','MINIDUMP_HANDLE_DATA_STREAM']
 __HandleOperationListStream__ = ['MINIDUMP_HANDLE_OPERATION_LIST']
