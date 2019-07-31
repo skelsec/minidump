@@ -157,6 +157,7 @@ class MinidumpFile:
 		self.sysinfo = None
 		self.comment_a = None
 		self.comment_w = None
+		self.exception = None
 		self.handles = None
 		self.unloaded_modules = None
 		self.misc_info = None
@@ -236,6 +237,11 @@ class MinidumpFile:
 				self.comment_w = CommentStreamW.parse(dir, self.file_handle)
 				#logging.debug(str(self.comment_w))
 				continue
+			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ExceptionStream:
+				logging.debug('Found ExceptionStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
+				self.exception = ExceptionList.parse(dir, self.file_handle)
+				#logging.debug(str(self.comment_w))
+				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.HandleDataStream:
 				logging.debug('Found HandleDataStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				self.handles = MinidumpHandleDataStream.parse(dir, self.file_handle)
@@ -290,7 +296,7 @@ class MinidumpFile:
 			"""
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.HandleOperationListStream:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
-			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ExceptionStream:
+			
 			"""
 
 	def __str__(self):
