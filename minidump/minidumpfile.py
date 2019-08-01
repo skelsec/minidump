@@ -86,14 +86,20 @@ class MINIDUMP_DIRECTORY:
 		self.Location = None
 
 	@staticmethod
+	def get_stream_type_value(buff, peek=False):
+		return int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
+
+	@staticmethod
 	def parse(buff):
 
-		raw_stream_type_value = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
+		raw_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(buff)
 
 		# StreamType value that are over 0xffff are considered MINIDUMP_USER_STREAM streams
 		# and their format depends on the client used to create the minidump.
 		# As per the documentation, this stream should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
-		if raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value:
+		is_user_stream = raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value
+		is_stream_supported = raw_stream_type_value in MINIDUMP_STREAM_TYPE._value2member_map_
+		if is_user_stream and not is_stream_supported:
 			return None
 
 		md = MINIDUMP_DIRECTORY()
@@ -172,7 +178,6 @@ class MinidumpFile:
 		self.memory_info = None
 		self.thread_info = None
 
-
 	@staticmethod
 	def parse(filename):
 		mf = MinidumpFile()
@@ -193,8 +198,13 @@ class MinidumpFile:
 		for i in range(0, self.header.NumberOfStreams):
 			self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
 			minidump_dir = MINIDUMP_DIRECTORY.parse(self.file_handle)
+			
 			if minidump_dir:
 				self.directories.append(minidump_dir)
+			else:
+				self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
+				user_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(self.file_handle)
+				logging.debug('Found Unknown UserStream directory Type: %x' % (user_stream_type_value))
 
 	def __parse_directories(self):
 
