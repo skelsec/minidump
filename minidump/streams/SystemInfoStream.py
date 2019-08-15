@@ -24,14 +24,28 @@ class PROCESSOR_LEVEL(enum.Enum):
 	INTEL_PENTIUM_PRO = 6 #or Pentium II
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx	
 class PRODUCT_TYPE(enum.Enum):
-	VER_NT_DOMAIN_CONTROLLER = 0x0000002 #The system is a domain controller.
-	VER_NT_SERVER = 0x0000003 #The system is a server.
-	VER_NT_WORKSTATION = 0x0000001 #The system is running Windows XP, Windows Vista, Windows 7, or Windows 8.
+	VER_UNIDENTIFIED_PRODUCT 	= 0x0000000 # Crashpad des not set ProductType value on non-Windows systems
+	VER_NT_WORKSTATION 			= 0x0000001 # The system is running Windows XP, Windows Vista, Windows 7, or Windows 8.
+	VER_NT_DOMAIN_CONTROLLER 	= 0x0000002 # The system is a domain controller.
+	VER_NT_SERVER 				= 0x0000003 # The system is a server.
+	
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PLATFORM_ID(enum.Enum):
 	VER_PLATFORM_WIN32s = 0 #Not supported
 	VER_PLATFORM_WIN32_WINDOWS = 1 #Not supported.
 	VER_PLATFORM_WIN32_NT = 2 #The operating system platform is Windows.
+	
+	# source : https://github.com/chromium/crashpad/blob/4b05be4265c0ffacfce26d7db7644ffbf9037696/minidump/minidump_extensions.h#L239
+	VER_PLATFORM_CRASHPAD_MAC       = 0x8101
+	VER_PLATFORM_CRASHPAD_IOS       = 0x8102
+	VER_PLATFORM_CRASHPAD_LINUX 	= 0x8201
+	VER_PLATFORM_CRASHPAD_SOLARIS 	= 0x8202
+	VER_PLATFORM_CRASHPAD_ANDROID 	= 0x8203
+	VER_PLATFORM_CRASHPAD_PS3       = 0x8204
+	VER_PLATFORM_CRASHPAD_NACL      = 0x8205
+	VER_PLATFORM_CRASHPAD_FUSCHIA 	= 0x8206
+	VER_PLATFORM_CRASHPAD_UNKNOWN 	= 0xffffffff
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class SUITE_MASK(enum.IntFlag):
 	VER_SUITE_BACKOFFICE = 0x00000004 #Microsoft BackOffice components are installed.

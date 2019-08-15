@@ -16,44 +16,44 @@ from .streams import *
 
 
 class MINIDUMP_STREAM_TYPE(enum.Enum):
-	UnusedStream			   = 0
-	ReservedStream0			= 1
-	ReservedStream1			= 2
-	ThreadListStream		   = 3
-	ModuleListStream		   = 4
-	MemoryListStream		   = 5
-	ExceptionStream			= 6
-	SystemInfoStream		   = 7
-	ThreadExListStream		 = 8
-	Memory64ListStream		 = 9
-	CommentStreamA			 = 10
-	CommentStreamW			 = 11
-	HandleDataStream		   = 12
-	FunctionTableStream		= 13
-	UnloadedModuleListStream   = 14
-	MiscInfoStream			 = 15
-	MemoryInfoListStream	   = 16
-	ThreadInfoListStream	   = 17
-	HandleOperationListStream  = 18
-	TokenStream = 19
-	JavaScriptDataStream = 20
-	SystemMemoryInfoStream = 21
-	ProcessVmCountersStream = 22
-	ThreadNamesStream = 24
-	ceStreamNull = 25
-	ceStreamSystemInfo = 26
-	ceStreamException = 27
-	ceStreamModuleList = 28
-	ceStreamProcessList = 29
-	ceStreamThreadList = 30
-	ceStreamThreadContextList = 31
+	UnusedStream			   	= 0
+	ReservedStream0				= 1
+	ReservedStream1				= 2
+	ThreadListStream		   	= 3
+	ModuleListStream		   	= 4
+	MemoryListStream		   	= 5
+	ExceptionStream				= 6
+	SystemInfoStream		   	= 7
+	ThreadExListStream		 	= 8
+	Memory64ListStream		 	= 9
+	CommentStreamA			 	= 10
+	CommentStreamW			 	= 11
+	HandleDataStream		   	= 12
+	FunctionTableStream			= 13
+	UnloadedModuleListStream   	= 14
+	MiscInfoStream			 	= 15
+	MemoryInfoListStream	   	= 16
+	ThreadInfoListStream	   	= 17
+	HandleOperationListStream  	= 18
+	TokenStream 				= 19
+	JavaScriptDataStream 		= 20
+	SystemMemoryInfoStream 		= 21
+	ProcessVmCountersStream 	= 22
+	ThreadNamesStream 			= 24
+	ceStreamNull 				= 25
+	ceStreamSystemInfo 			= 26
+	ceStreamException 			= 27
+	ceStreamModuleList 			= 28
+	ceStreamProcessList 		= 29
+	ceStreamThreadList 			= 30
+	ceStreamThreadContextList 	= 31
 	ceStreamThreadCallStackList = 32
-	ceStreamMemoryVirtualList = 33
-	ceStreamMemoryPhysicalList = 34
-	ceStreamBucketParameters = 35
-	ceStreamProcessModuleMap = 36
-	ceStreamDiagnosisList = 37
-	LastReservedStream		 = 0xffff
+	ceStreamMemoryVirtualList 	= 33
+	ceStreamMemoryPhysicalList 	= 34
+	ceStreamBucketParameters 	= 35
+	ceStreamProcessModuleMap 	= 36
+	ceStreamDiagnosisList 		= 37
+	LastReservedStream		 	= 0xffff
 
 class MINIDUMP_TYPE(enum.IntFlag):
 	MiniDumpNormal                         = 0x00000000
@@ -86,9 +86,24 @@ class MINIDUMP_DIRECTORY:
 		self.Location = None
 
 	@staticmethod
+	def get_stream_type_value(buff, peek=False):
+		return int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
+
+	@staticmethod
 	def parse(buff):
+
+		raw_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(buff)
+
+		# StreamType value that are over 0xffff are considered MINIDUMP_USER_STREAM streams
+		# and their format depends on the client used to create the minidump.
+		# As per the documentation, this stream should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
+		is_user_stream = raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value
+		is_stream_supported = raw_stream_type_value in MINIDUMP_STREAM_TYPE._value2member_map_
+		if is_user_stream and not is_stream_supported:
+			return None
+
 		md = MINIDUMP_DIRECTORY()
-		md.StreamType = MINIDUMP_STREAM_TYPE(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
+		md.StreamType = MINIDUMP_STREAM_TYPE(raw_stream_type_value)
 		md.Location = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		return md
 
@@ -164,7 +179,6 @@ class MinidumpFile:
 		self.memory_info = None
 		self.thread_info = None
 
-
 	@staticmethod
 	def parse(filename):
 		mf = MinidumpFile()
@@ -184,10 +198,17 @@ class MinidumpFile:
 		self.header = MinidumpHeader.parse(self.file_handle)
 		for i in range(0, self.header.NumberOfStreams):
 			self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
-			self.directories.append(MINIDUMP_DIRECTORY.parse(self.file_handle))
-
+			minidump_dir = MINIDUMP_DIRECTORY.parse(self.file_handle)
+			
+			if minidump_dir:
+				self.directories.append(minidump_dir)
+			else:
+				self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
+				user_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(self.file_handle)
+				logging.debug('Found Unknown UserStream directory Type: %x' % (user_stream_type_value))
 
 	def __parse_directories(self):
+
 		for dir in self.directories:
 			if dir.StreamType == MINIDUMP_STREAM_TYPE.UnusedStream:
 				logging.debug('Found UnusedStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
