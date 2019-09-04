@@ -89,7 +89,7 @@ class MINIDUMP_SYSTEM_INFO:
 	def parse(buff):
 		msi = MINIDUMP_SYSTEM_INFO()
 		msi.ProcessorArchitecture = PROCESSOR_ARCHITECTURE(int.from_bytes(buff.read(2), byteorder = 'little', signed = False))
-		msi.ProcessorLevel = PROCESSOR_LEVEL(int.from_bytes(buff.read(2), byteorder = 'little', signed = False))
+		msi.ProcessorLevel = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
 		msi.ProcessorRevision = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
 		#the below field is present in the documentation from MSDN, however is not present in the actual dump
 		#msi.Reserved0 = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
