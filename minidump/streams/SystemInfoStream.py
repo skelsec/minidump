@@ -140,7 +140,7 @@ class MinidumpSystemInfo:
 	def guess_os(self):
 		if self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType == PRODUCT_TYPE.VER_NT_WORKSTATION:
 			self.OperatingSystem = "Windows 10"
-		elif self.MajorVersion == 10 and self.MinorVersion == 0 and ProductType != self.ProductType.VER_NT_WORKSTATION:
+		elif self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType != self.ProductType.VER_NT_WORKSTATION:
 			self.OperatingSystem =  "Windows Server 2016 Technical Preview"
 		elif self.MajorVersion == 6 and self.MinorVersion == 3 and self.ProductType == self.ProductType.VER_NT_WORKSTATION:
 			self.OperatingSystem =  "Windows 8.1"
@@ -167,7 +167,8 @@ class MinidumpSystemInfo:
 			self.OperatingSystem =  "Windows XP"
 		elif self.MajorVersion == 5 and self.MinorVersion == 0:
 			self.OperatingSystem =  "Windows 2000"
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpSystemInfo()
 		buff.seek(dir.Location.Rva)
