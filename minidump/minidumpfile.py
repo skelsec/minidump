@@ -4,6 +4,7 @@
 #  Tamas Jos (@skelsec)
 #
 
+import io
 import sys
 import enum
 import struct
@@ -184,6 +185,17 @@ class MinidumpFile:
 		mf = MinidumpFile()
 		mf.filename = filename
 		mf.file_handle = open(filename, 'rb')
+		mf._parse()
+		return mf
+
+	@staticmethod
+	def parse_bytes(data):
+		return MinidumpFile.parse_buff(io.BytesIO(data))
+
+	@staticmethod
+	def parse_buff(buffer):
+		mf = MinidumpFile()
+		mf.file_handle = buffer
 		mf._parse()
 		return mf
 
