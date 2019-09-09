@@ -5,7 +5,7 @@ setup(
 	name="minidump",
 
 	# Version number (initial):
-	version="0.0.9",
+	version="0.0.10",
 
 	# Application author details:
 	author="Tamas Jos",
