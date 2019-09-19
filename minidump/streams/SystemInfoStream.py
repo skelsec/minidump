@@ -76,9 +76,9 @@ class MINIDUMP_SYSTEM_INFO:
 		self.BuildNumber = None
 		self.PlatformId = None
 		self.CSDVersionRva = None
-		self.Reserved1 = None
+		self.Reserved1 = 0
 		self.SuiteMask = None
-		self.Reserved2 = None
+		self.Reserved2 = 0
 		self.VendorId = []
 		self.VersionInformation = None
 		self.FeatureInformation = None
@@ -88,7 +88,11 @@ class MINIDUMP_SYSTEM_INFO:
 		#for wrtier
 		self.CSDVersion = None
 
-	def to_bytes(self):
+	def get_size(self):
+		# here we cannot tell upfront what the size will be :(
+		return len(self.to_bytes())
+
+	def to_bytes(self, data_buffer = None):
 		t = self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False)
 		t += self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False)
 		t += self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False)
@@ -99,10 +103,19 @@ class MINIDUMP_SYSTEM_INFO:
 		t += self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.PlatformId.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
+		if data_buffer is None:
+			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
+		else:
+			pos = data_buffer.tell()
+			data_buffer.write(100*b'\x00')
+			self.CSDVersionRva = data_buffer.tell()
+			data_buffer.write(self.CSDVersion.encode('ascii') + b'\x00')
+			pos_end = data_buffer.tell()
+			data_buffer.seek(pos,0)
+			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
 		#missing filed here?
 		t += self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.Reserved2.value.to_bytes(2, byteorder = 'little', signed = False)
+		t += self.Reserved2.to_bytes(2, byteorder = 'little', signed = False)
 		if self.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
 			for vid in self.VendorId:
 				t += vid.to_bytes(4, byteorder = 'little', signed = False)
@@ -111,8 +124,12 @@ class MINIDUMP_SYSTEM_INFO:
 			t += self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False)
 		else:
 			for pf in self.ProcessorFeatures:
-				t += pf.value.to_bytes(8, byteorder = 'little', signed = False)
-		return t
+				t += pf.to_bytes(8, byteorder = 'little', signed = False)
+		
+		if data_buffer is None:
+			return t
+		else:
+			data_buffer.write(t)
 		
 	@staticmethod
 	def parse(buff):
@@ -143,6 +160,12 @@ class MINIDUMP_SYSTEM_INFO:
 				msi.ProcessorFeatures.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 		
 		return msi
+
+	def __str__(self):
+		t = ''
+		for k in self.__dict__:
+			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
+		return t
 		
 class MinidumpSystemInfo:
 	def __init__(self):

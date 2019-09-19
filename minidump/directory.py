@@ -8,7 +8,7 @@ class MINIDUMP_DIRECTORY:
 		self.Location = None
 
 	def to_bytes(self):
-		t = self.StreamType.to_bytes()
+		t = self.StreamType.value.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.Location.to_bytes()
 		return t
 
