@@ -6,6 +6,9 @@
 class CommentStreamA:
 	def __init__(self):
 		self.data = None
+
+	def to_bytes(self):
+		return self.data.encode('ascii')
 	
 	@staticmethod
 	def parse(dir, buff):

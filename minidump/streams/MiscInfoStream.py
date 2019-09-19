@@ -27,7 +27,8 @@ class MINIDUMP_MISC_INFO:
 		self.ProcessCreateTime = None
 		self.ProcessUserTime = None
 		self.ProcessKernelTime = None
-		
+	
+	@staticmethod
 	def parse(buff):
 		mmi = MINIDUMP_MISC_INFO()
 		mmi.SizeOfInfo = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -60,7 +61,8 @@ class MINIDUMP_MISC_INFO_2:
 		self.ProcessorMhzLimit = None
 		self.ProcessorMaxIdleState = None
 		self.ProcessorCurrentIdleState = None
-		
+	
+	@staticmethod
 	def parse(buff):
 		mmi = MINIDUMP_MISC_INFO_2()
 		mmi.SizeOfInfo = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -97,7 +99,8 @@ class MinidumpMiscInfo:
 		self.ProcessorMhzLimit = None
 		self.ProcessorMaxIdleState = None
 		self.ProcessorCurrentIdleState = None
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMiscInfo()
 		buff.seek(dir.Location.Rva)

@@ -84,6 +84,35 @@ class MINIDUMP_SYSTEM_INFO:
 		self.FeatureInformation = None
 		self.AMDExtendedCpuFeatures = None
 		self.ProcessorFeatures = []
+
+		#for wrtier
+		self.CSDVersion = None
+
+	def to_bytes(self):
+		t = self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False)
+		t += self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False)
+		t += self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False)
+		#missing filed here?
+		t += self.NumberOfProcessors.to_bytes(1, byteorder = 'little', signed = False)
+		t += self.ProductType.value.to_bytes(1, byteorder = 'little', signed = False)
+		t += self.MajorVersion.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.PlatformId.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
+		#missing filed here?
+		t += self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False)
+		t += self.Reserved2.value.to_bytes(2, byteorder = 'little', signed = False)
+		if self.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
+			for vid in self.VendorId:
+				t += vid.to_bytes(4, byteorder = 'little', signed = False)
+			t += self.VersionInformation.value.to_bytes(4, byteorder = 'little', signed = False)
+			t += self.FeatureInformation.value.to_bytes(4, byteorder = 'little', signed = False)
+			t += self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False)
+		else:
+			for pf in self.ProcessorFeatures:
+				t += pf.value.to_bytes(8, byteorder = 'little', signed = False)
+		return t
 		
 	@staticmethod
 	def parse(buff):
@@ -104,13 +133,13 @@ class MINIDUMP_SYSTEM_INFO:
 		msi.SuiteMask = SUITE_MASK(int.from_bytes(buff.read(2), byteorder = 'little', signed = False))
 		msi.Reserved2 = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
 		if msi.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
-			for i in range(3):
+			for _ in range(3):
 				msi.VendorId.append(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
 			msi.VersionInformation = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 			msi.FeatureInformation = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 			msi.AMDExtendedCpuFeatures = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		else:
-			for i in range(2):
+			for _ in range(2):
 				msi.ProcessorFeatures.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 		
 		return msi

@@ -13,7 +13,14 @@ class MINIDUMP_UNLOADED_MODULE_LIST:
 		self.SizeOfHeader = None
 		self.SizeOfEntry = None
 		self.NumberOfEntries = None
-		
+
+	def to_bytes(self):
+		t  = self.SizeOfHeader.value.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False)
+		return t
+	
+	@staticmethod
 	def parse(buff):
 		muml = MINIDUMP_UNLOADED_MODULE_LIST()
 		muml.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -29,7 +36,16 @@ class MINIDUMP_UNLOADED_MODULE:
 		self.CheckSum = None
 		self.TimeDateStamp = None
 		self.ModuleNameRva = None
-		
+
+	def to_bytes(self):
+		t  = self.BaseOfImage.value.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.CheckSum.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.ModuleNameRva.to_bytes(4, byteorder = 'little', signed = False)
+		return t
+	
+	@staticmethod
 	def parse(buff):
 		mum = MINIDUMP_UNLOADED_MODULE()
 		mum.BaseOfImage = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
@@ -49,7 +65,8 @@ class MinidumpUnloadedModule:
 		
 		self.checksum = None
 		self.timestamp = None
-		
+	
+	@staticmethod
 	def parse(mod, buff):
 		"""
 		mod: MINIDUMP_MODULE
@@ -72,6 +89,7 @@ class MinidumpUnloadedModule:
 	def __str__(self):
 		return 'Unloaded Module name: %s Size: %s BaseAddress: %s' % (self.name, hex(self.size), hex(self.baseaddress))	
 
+	@staticmethod
 	def get_header():
 		return [
 			'Module name',
@@ -92,13 +110,14 @@ class MinidumpUnloadedModule:
 class MinidumpUnloadedModuleList:
 	def __init__(self):
 		self.modules = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpUnloadedModuleList()
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 		muml = MINIDUMP_UNLOADED_MODULE_LIST.parse(chunk)
-		for i in range(muml.NumberOfEntries):
+		for _ in range(muml.NumberOfEntries):
 			mod = MINIDUMP_UNLOADED_MODULE.parse(chunk)
 			t.modules.append(MinidumpUnloadedModule.parse(mod, buff))
 		

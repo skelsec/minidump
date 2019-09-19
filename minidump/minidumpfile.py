@@ -10,153 +10,13 @@ import enum
 import struct
 import logging
 
-from .exceptions import *
-from .minidumpreader import *
-from .common_structs import *
-from .streams import *
+from minidump.header import MinidumpHeader
+from minidump.minidumpreader import MinidumpFileReader
+from minidump.streams import *
+from minidump.common_structs import *
+from minidump.constants import MINIDUMP_STREAM_TYPE
+from minidump.directory import MINIDUMP_DIRECTORY
 
-
-class MINIDUMP_STREAM_TYPE(enum.Enum):
-	UnusedStream			   	= 0
-	ReservedStream0				= 1
-	ReservedStream1				= 2
-	ThreadListStream		   	= 3
-	ModuleListStream		   	= 4
-	MemoryListStream		   	= 5
-	ExceptionStream				= 6
-	SystemInfoStream		   	= 7
-	ThreadExListStream		 	= 8
-	Memory64ListStream		 	= 9
-	CommentStreamA			 	= 10
-	CommentStreamW			 	= 11
-	HandleDataStream		   	= 12
-	FunctionTableStream			= 13
-	UnloadedModuleListStream   	= 14
-	MiscInfoStream			 	= 15
-	MemoryInfoListStream	   	= 16
-	ThreadInfoListStream	   	= 17
-	HandleOperationListStream  	= 18
-	TokenStream 				= 19
-	JavaScriptDataStream 		= 20
-	SystemMemoryInfoStream 		= 21
-	ProcessVmCountersStream 	= 22
-	ThreadNamesStream 			= 24
-	ceStreamNull 				= 25
-	ceStreamSystemInfo 			= 26
-	ceStreamException 			= 27
-	ceStreamModuleList 			= 28
-	ceStreamProcessList 		= 29
-	ceStreamThreadList 			= 30
-	ceStreamThreadContextList 	= 31
-	ceStreamThreadCallStackList = 32
-	ceStreamMemoryVirtualList 	= 33
-	ceStreamMemoryPhysicalList 	= 34
-	ceStreamBucketParameters 	= 35
-	ceStreamProcessModuleMap 	= 36
-	ceStreamDiagnosisList 		= 37
-	LastReservedStream		 	= 0xffff
-
-class MINIDUMP_TYPE(enum.IntFlag):
-	MiniDumpNormal                         = 0x00000000
-	MiniDumpWithDataSegs                   = 0x00000001
-	MiniDumpWithFullMemory                 = 0x00000002
-	MiniDumpWithHandleData                 = 0x00000004
-	MiniDumpFilterMemory                   = 0x00000008
-	MiniDumpScanMemory                     = 0x00000010
-	MiniDumpWithUnloadedModules            = 0x00000020
-	MiniDumpWithIndirectlyReferencedMemory = 0x00000040
-	MiniDumpFilterModulePaths              = 0x00000080
-	MiniDumpWithProcessThreadData          = 0x00000100
-	MiniDumpWithPrivateReadWriteMemory     = 0x00000200
-	MiniDumpWithoutOptionalData            = 0x00000400
-	MiniDumpWithFullMemoryInfo             = 0x00000800
-	MiniDumpWithThreadInfo                 = 0x00001000
-	MiniDumpWithCodeSegs                   = 0x00002000
-	MiniDumpWithoutAuxiliaryState          = 0x00004000
-	MiniDumpWithFullAuxiliaryState         = 0x00008000
-	MiniDumpWithPrivateWriteCopyMemory     = 0x00010000
-	MiniDumpIgnoreInaccessibleMemory       = 0x00020000
-	MiniDumpWithTokenInformation           = 0x00040000
-	MiniDumpWithModuleHeaders              = 0x00080000
-	MiniDumpFilterTriage                   = 0x00100000
-	MiniDumpValidTypeFlags                 = 0x001fffff
-
-class MINIDUMP_DIRECTORY:
-	def __init__(self):
-		self.StreamType = None
-		self.Location = None
-
-	@staticmethod
-	def get_stream_type_value(buff, peek=False):
-		return int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-
-	@staticmethod
-	def parse(buff):
-
-		raw_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(buff)
-
-		# StreamType value that are over 0xffff are considered MINIDUMP_USER_STREAM streams
-		# and their format depends on the client used to create the minidump.
-		# As per the documentation, this stream should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
-		is_user_stream = raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value
-		is_stream_supported = raw_stream_type_value in MINIDUMP_STREAM_TYPE._value2member_map_
-		if is_user_stream and not is_stream_supported:
-			return None
-
-		md = MINIDUMP_DIRECTORY()
-		md.StreamType = MINIDUMP_STREAM_TYPE(raw_stream_type_value)
-		md.Location = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
-		return md
-
-	def __str__(self):
-		t = 'StreamType: %s %s' % (self.StreamType, self.Location)
-		return t
-
-# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
-class MinidumpHeader:
-	def __init__(self):
-		self.Signature = None
-		self.Version = None
-		self.ImplementationVersion = None
-		self.NumberOfStreams = None
-		self.StreamDirectoryRva = None
-		self.CheckSum = None
-		self.Reserved = None
-		self.TimeDateStamp = None
-		self.Flags = None
-
-	@staticmethod
-	def parse(buff):
-		mh = MinidumpHeader()
-		mh.Signature = buff.read(4).decode()[::-1]
-		if mh.Signature != 'PMDM':
-			raise MinidumpHeaderSignatureMismatchException(mh.Signature)
-		mh.Version = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
-		mh.ImplementationVersion = int.from_bytes(buff.read(2), byteorder = 'little', signed = False)
-		mh.NumberOfStreams = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		mh.StreamDirectoryRva = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		mh.CheckSum = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		mh.Reserved = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		mh.TimeDateStamp = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		try:
-			mh.Flags = MINIDUMP_TYPE(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
-		except Exception as e:
-			raise MinidumpHeaderFlagsException('Could not parse header flags!')
-
-		return mh
-
-	def __str__(self):
-		t = '== MinidumpHeader ==\n'
-		t+= 'Signature: %s\n' % self.Signature
-		t+= 'Version: %s\n' % self.Version
-		t+= 'ImplementationVersion: %s\n' % self.ImplementationVersion
-		t+= 'NumberOfStreams: %s\n' % self.NumberOfStreams
-		t+= 'StreamDirectoryRva: %s\n' % self.StreamDirectoryRva
-		t+= 'CheckSum: %s\n' % self.CheckSum
-		t+= 'Reserved: %s\n' % self.Reserved
-		t+= 'TimeDateStamp: %s\n' % self.TimeDateStamp
-		t+= 'Flags: %s\n' % self.Flags
-		return t
 
 class MinidumpFile:
 	def __init__(self):
@@ -340,7 +200,12 @@ class MinidumpFile:
 			t += str(dir) + '\n'
 		for mod in self.modules:
 			t += str(mod) + '\n'
-		for segment in self.memorysegments:
-			t+= str(segment) + '\n'
+		if self.memory_segments is not None:
+			for segment in self.memory_segments:
+				t+= str(segment) + '\n'
+
+		if self.memory_segments_64 is not None:
+			for segment in self.memory_segments_64:
+				t+= str(segment) + '\n'
 
 		return t

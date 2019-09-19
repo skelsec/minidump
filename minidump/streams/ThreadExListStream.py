@@ -12,10 +12,11 @@ class MINIDUMP_THREAD_EX_LIST:
 		self.NumberOfThreads = None
 		self.Threads = []
 	
+	@staticmethod
 	def parse(buff):
 		mtel = MINIDUMP_THREAD_EX_LIST()
 		mtel.NumberOfThreads = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for i in range(mtle.NumberOfThreads):
+		for _ in range(mtel.NumberOfThreads):
 			mtel.Threads.append(MINIDUMP_THREAD_EX.parse(buff))
 		
 		return mtel
@@ -31,7 +32,8 @@ class MINIDUMP_THREAD_EX:
 		self.Stack = None
 		self.ThreadContext = None
 		self.BackingStore = None
-		
+	
+	@staticmethod
 	def parse(buff):
 		mte = MINIDUMP_THREAD_EX()
 		mte.ThreadId = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -43,7 +45,8 @@ class MINIDUMP_THREAD_EX:
 		mte.ThreadContext = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		mte.BackingStore = MINIDUMP_MEMORY_DESCRIPTOR.parse(buff)
 		return mte
-		
+	
+	@staticmethod
 	def get_header():
 		return [
 			'ThreadId',
@@ -70,7 +73,8 @@ class MINIDUMP_THREAD_EX:
 class MinidumpThreadExList:
 	def __init__(self):
 		self.threads = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpThreadExList()
 		buff.seek(dir.Location.Rva)

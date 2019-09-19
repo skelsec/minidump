@@ -12,13 +12,20 @@ class MINIDUMP_MEMORY64_LIST:
 		self.NumberOfMemoryRanges = None
 		self.BaseRva = None
 		self.MemoryRanges = []
+
+	def to_bytes(self):
+		t = len(self.MemoryRanges).to_bytes(8, byteorder = 'little', signed = False)
+		t += self.BaseRva.to_bytes(8, byteorder = 'little', signed = False)
+		for memrange in self.MemoryRanges:
+			t += memrange.to_bytes()
+		return t
 	
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MEMORY64_LIST()
 		mml.NumberOfMemoryRanges = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mml.BaseRva = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
-		for i in range(mml.NumberOfMemoryRanges):
+		for _ in range(mml.NumberOfMemoryRanges):
 			mml.MemoryRanges.append(MINIDUMP_MEMORY_DESCRIPTOR64.parse(buff))
 		
 		return mml
@@ -37,6 +44,11 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 	def __init__(self):
 		self.StartOfMemoryRange = None
 		self.DataSize = None
+
+	def to_bytes(self):
+		t = self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.DataSize.to_bytes(8, byteorder = 'little', signed = False)
+		return t
 		
 	@staticmethod
 	def parse(buff):
@@ -53,7 +65,8 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 class MinidumpMemory64List:
 	def __init__(self):
 		self.memory_segments = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMemory64List()
 		buff.seek(dir.Location.Rva)
