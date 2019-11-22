@@ -8,7 +8,8 @@ class MINIDUMP_USER_STREAM:
 		self.Type = None
 		self.BufferSize = None
 		self.Buffer = None
-		
+	
+	@staticmethod
 	def parse(buff):
 		mus = MINIDUMP_USER_STREAM()
 		mus.Type = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)

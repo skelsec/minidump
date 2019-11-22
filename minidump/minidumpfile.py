@@ -49,6 +49,18 @@ class MinidumpFile:
 		return mf
 
 	@staticmethod
+	def parse_external(file_handle, filename = ''):
+		"""
+		External file handle must be an object that exposes basic file IO functionality
+		that you'd get by python's file buffer (read, seek, tell etc.)
+		"""
+		mf = MinidumpFile()
+		mf.filename = filename
+		mf.file_handle = file_handle
+		mf._parse()
+		return mf
+
+	@staticmethod
 	def parse_bytes(data):
 		return MinidumpFile.parse_buff(io.BytesIO(data))
 

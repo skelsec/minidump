@@ -34,6 +34,7 @@ class MINIDUMP_EXCEPTION_STREAM:
 		t += 'ThreadContext: %s\n' % str(self.ThreadContext)
 		return t
 	
+	@staticmethod
 	def get_header():
 		return [
 			'ThreadId',
@@ -116,7 +117,8 @@ class MINIDUMP_EXCEPTION:
 		self.NumberParameters = None
 		self.__unusedAlignment = None
 		self.ExceptionInformation = []
-		
+	
+	@staticmethod
 	def parse(buff):
 		me = MINIDUMP_EXCEPTION()
 		me.ExceptionCode = ExceptionCode(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
@@ -141,6 +143,7 @@ class MINIDUMP_EXCEPTION:
 		t += "ExceptionInformation : %s\n" % ";".join("0x%x" % info for info in self.ExceptionInformation)
 		return t
 
+	@staticmethod
 	def get_header():
 		return [
 			'ExceptionCode',
@@ -164,7 +167,8 @@ class MINIDUMP_EXCEPTION:
 class ExceptionList:
 	def __init__(self):
 		self.exception_records = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = ExceptionList()
 	

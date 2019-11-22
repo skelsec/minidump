@@ -9,7 +9,8 @@ class MINIDUMP_HANDLE_OPERATION_LIST:
 		self.SizeOfEntry = None
 		self.NumberOfEntries = None
 		self.Reserved = None
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		mhds = MINIDUMP_HANDLE_OPERATION_LIST()
 		mhds.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)

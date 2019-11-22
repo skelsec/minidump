@@ -4,7 +4,9 @@
 #  Tamas Jos (@skelsec)
 #
 
+import io
 from minidump.common_structs import * 
+from minidump.streams.MemoryListStream import MINIDUMP_MEMORY_DESCRIPTOR
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680399(v=vs.85).aspx
 class MINIDUMP_THREAD_EX_LIST:
@@ -79,7 +81,7 @@ class MinidumpThreadExList:
 		t = MinidumpThreadExList()
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
-		mtl = MINIDUMP_THREAD_EX.parse(chunk)
+		mtl = MINIDUMP_THREAD_EX_LIST.parse(chunk)
 		t.threads = mtl.Threads
 		return t
 	

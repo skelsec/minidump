@@ -11,7 +11,8 @@ class MINIDUMP_FUNCTION_TABLE_STREAM:
 		self.SizeOfFunctionEntry = None
 		self.NumberOfDescriptors = None
 		self.SizeOfAlignPad = None
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		mfts = MINIDUMP_FUNCTION_TABLE_STREAM()
 		mfts.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
