@@ -5,6 +5,9 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		self.DataSize = None
 		self.Rva = None
 
+	def get_size(self):
+		return 8
+
 	def to_bytes(self):
 		t = self.DataSize.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.Rva.to_bytes(4, byteorder = 'little', signed = False)
@@ -25,6 +28,9 @@ class MINIDUMP_LOCATION_DESCRIPTOR64:
 	def __init__(self):
 		self.DataSize = None
 		self.Rva = None
+
+	def get_size(self):
+		return 16
 
 	def to_bytes(self):
 		t = self.DataSize.to_bytes(8, byteorder = 'little', signed = False)

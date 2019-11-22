@@ -135,10 +135,10 @@ if WIN32_VERBOSE_MODE:
             self.__copy_attribute('argtypes')
             self.__copy_attribute('restype')
             self.__copy_attribute('errcheck')
-            print "-"*10
-            print "%s ! %s %r" % (self.__dllname, self.__funcname, argv)
+            print("-"*10)
+            print("%s ! %s %r" % (self.__dllname, self.__funcname, argv))
             retval = self.__func(*argv)
-            print "== %r" % (retval,)
+            print("== %r" % (retval,))
             return retval
 
     windll = WinDllHook()
@@ -341,7 +341,7 @@ def MakeANSIVersion(fn):
         v_types.extend( [ type(value) for (key, value) in argd.iteritems() ] )
         if t_ansi in v_types:
             argv = list(argv)
-            for index in xrange(len(argv)):
+            for index in range(len(argv)):
                 if v_types[index] == t_ansi:
                     argv[index] = t_unicode(argv[index])
             for key, value in argd.items():
@@ -365,7 +365,7 @@ def MakeWideVersion(fn):
         v_types.extend( [ type(value) for (key, value) in argd.iteritems() ] )
         if t_unicode in v_types:
             argv = list(argv)
-            for index in xrange(len(argv)):
+            for index in range(len(argv)):
                 if v_types[index] == t_unicode:
                     argv[index] = t_ansi(argv[index])
             for key, value in argd.items():
@@ -675,17 +675,17 @@ ERROR_NONE_MAPPED                   = 1332
 RPC_S_SERVER_UNAVAILABLE            = 1722
 
 # Standard access rights
-DELETE                           = 0x00010000L
-READ_CONTROL                     = 0x00020000L
-WRITE_DAC                        = 0x00040000L
-WRITE_OWNER                      = 0x00080000L
-SYNCHRONIZE                      = 0x00100000L
-STANDARD_RIGHTS_REQUIRED         = 0x000F0000L
+DELETE                           = 0x00010000
+READ_CONTROL                     = 0x00020000
+WRITE_DAC                        = 0x00040000
+WRITE_OWNER                      = 0x00080000
+SYNCHRONIZE                      = 0x00100000
+STANDARD_RIGHTS_REQUIRED         = 0x000F0000
 STANDARD_RIGHTS_READ             = READ_CONTROL
 STANDARD_RIGHTS_WRITE            = READ_CONTROL
 STANDARD_RIGHTS_EXECUTE          = READ_CONTROL
-STANDARD_RIGHTS_ALL              = 0x001F0000L
-SPECIFIC_RIGHTS_ALL              = 0x0000FFFFL
+STANDARD_RIGHTS_ALL              = 0x001F0000
+SPECIFIC_RIGHTS_ALL              = 0x0000FFFF
 
 #--- Structures ---------------------------------------------------------------
 

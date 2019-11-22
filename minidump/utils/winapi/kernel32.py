@@ -1,4 +1,13 @@
 from minidump.utils.winapi.defines import *
+import enum
+
+
+# DWORD WINAPI GetLastError(void);
+def GetLastError():
+    _GetLastError = windll.kernel32.GetLastError
+    _GetLastError.argtypes = []
+    _GetLastError.restype  = DWORD
+    return _GetLastError()
 
 class WindowsMinBuild(enum.Enum):
 	WIN_XP = 2500
@@ -72,6 +81,50 @@ THREAD_DIRECT_IMPERSONATION      = 0x0200
 THREAD_SET_LIMITED_INFORMATION   = 0x0400
 THREAD_QUERY_LIMITED_INFORMATION = 0x0800
 
+# typedef struct DECLSPEC_ALIGN(16) _MEMORY_BASIC_INFORMATION64 {
+#     ULONGLONG BaseAddress;
+#     ULONGLONG AllocationBase;
+#     DWORD     AllocationProtect;
+#     DWORD     __alignment1;
+#     ULONGLONG RegionSize;
+#     DWORD     State;
+#     DWORD     Protect;
+#     DWORD     Type;
+#     DWORD     __alignment2;
+# } MEMORY_BASIC_INFORMATION64, *PMEMORY_BASIC_INFORMATION64;
+class MEMORY_BASIC_INFORMATION64(Structure):
+    _fields_ = [
+        ('BaseAddress',         ULONGLONG),     # remote pointer
+        ('AllocationBase',      ULONGLONG),     # remote pointer
+        ('AllocationProtect',   DWORD),
+        ('__alignment1',        DWORD),
+        ('RegionSize',          ULONGLONG),
+        ('State',               DWORD),
+        ('Protect',             DWORD),
+        ('Type',                DWORD),
+        ('__alignment2',        DWORD),
+    ]
+
+# typedef struct _MEMORY_BASIC_INFORMATION {
+#     PVOID BaseAddress;
+#     PVOID AllocationBase;
+#     DWORD AllocationProtect;
+#     SIZE_T RegionSize;
+#     DWORD State;
+#     DWORD Protect;
+#     DWORD Type;
+# } MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;
+class MEMORY_BASIC_INFORMATION(Structure):
+    _fields_ = [
+        ('BaseAddress',         SIZE_T),    # remote pointer
+        ('AllocationBase',      SIZE_T),    # remote pointer
+        ('AllocationProtect',   DWORD),
+        ('RegionSize',          SIZE_T),
+        ('State',               DWORD),
+        ('Protect',             DWORD),
+        ('Type',                DWORD),
+    ]
+PMEMORY_BASIC_INFORMATION = POINTER(MEMORY_BASIC_INFORMATION)
 
 
 # HANDLE WINAPI OpenProcess(
@@ -87,4 +140,42 @@ def OpenProcess(dwDesiredAccess, bInheritHandle, dwProcessId):
     hProcess = _OpenProcess(dwDesiredAccess, bool(bInheritHandle), dwProcessId)
     if hProcess == NULL:
         raise ctypes.WinError()
-    return ProcessHandle(hProcess, dwAccess = dwDesiredAccess)
+    return hProcess
+
+# SIZE_T WINAPI VirtualQueryEx(
+#   __in      HANDLE hProcess,
+#   __in_opt  LPCVOID lpAddress,
+#   __out     PMEMORY_BASIC_INFORMATION lpBuffer,
+#   __in      SIZE_T dwLength
+# );
+def VirtualQueryEx(hProcess, lpAddress):
+    _VirtualQueryEx = windll.kernel32.VirtualQueryEx
+    _VirtualQueryEx.argtypes = [HANDLE, LPVOID, PMEMORY_BASIC_INFORMATION, SIZE_T]
+    _VirtualQueryEx.restype  = SIZE_T
+
+    lpBuffer  = MEMORY_BASIC_INFORMATION()
+    dwLength  = sizeof(MEMORY_BASIC_INFORMATION)
+    success   = _VirtualQueryEx(hProcess, lpAddress, byref(lpBuffer), dwLength)
+    if success == 0:
+        raise ctypes.WinError()
+    return lpBuffer
+
+
+# BOOL WINAPI ReadProcessMemory(
+#   __in   HANDLE hProcess,
+#   __in   LPCVOID lpBaseAddress,
+#   __out  LPVOID lpBuffer,
+#   __in   SIZE_T nSize,
+#   __out  SIZE_T* lpNumberOfBytesRead
+# );
+def ReadProcessMemory(hProcess, lpBaseAddress, nSize):
+    _ReadProcessMemory = windll.kernel32.ReadProcessMemory
+    _ReadProcessMemory.argtypes = [HANDLE, LPVOID, LPVOID, SIZE_T, POINTER(SIZE_T)]
+    _ReadProcessMemory.restype  = bool
+
+    lpBuffer            = ctypes.create_string_buffer(b'', nSize)
+    lpNumberOfBytesRead = SIZE_T(0)
+    success = _ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, byref(lpNumberOfBytesRead))
+    if not success and GetLastError() != ERROR_PARTIAL_COPY:
+        raise ctypes.WinError()
+    return str(lpBuffer.raw)[:lpNumberOfBytesRead.value]

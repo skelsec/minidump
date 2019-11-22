@@ -9,9 +9,9 @@ class MinidumpHeader:
 		self.ImplementationVersion = None
 		self.NumberOfStreams = None
 		self.StreamDirectoryRva = None
-		self.CheckSum = b'\x00'*4
-		self.Reserved = b'\x00'*4
-		self.TimeDateStamp = b'\x00'*4
+		self.CheckSum = 0
+		self.Reserved = 0
+		self.TimeDateStamp = 0
 		self.Flags = None
 
 	def to_bytes(self):

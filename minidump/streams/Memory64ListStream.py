@@ -13,6 +13,9 @@ class MINIDUMP_MEMORY64_LIST:
 		self.BaseRva = None
 		self.MemoryRanges = []
 
+	def get_size(self):
+		return 8 + 8 + len(self.MemoryRanges) * MINIDUMP_MEMORY_DESCRIPTOR64().get_size()
+
 	def to_bytes(self):
 		t = len(self.MemoryRanges).to_bytes(8, byteorder = 'little', signed = False)
 		t += self.BaseRva.to_bytes(8, byteorder = 'little', signed = False)
@@ -44,6 +47,9 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 	def __init__(self):
 		self.StartOfMemoryRange = None
 		self.DataSize = None
+
+	def get_size(self):
+		return 16
 
 	def to_bytes(self):
 		t = self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False)

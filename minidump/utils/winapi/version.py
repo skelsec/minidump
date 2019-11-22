@@ -94,3 +94,19 @@ def GetVersionExW():
         _GetVersionExW.argtypes = [POINTER(OSVERSIONINFOW)]
         _GetVersionExW(byref(osi))
     return osi
+
+def GetFileVersionInfoW(lptstrFilename):
+    _GetFileVersionInfoW = windll.version.GetFileVersionInfoW
+    _GetFileVersionInfoW.argtypes = [LPWSTR, DWORD, DWORD, LPVOID]
+    _GetFileVersionInfoW.restype  = bool
+    _GetFileVersionInfoW.errcheck = RaiseIfZero
+
+    _GetFileVersionInfoSizeW = windll.version.GetFileVersionInfoSizeW
+    _GetFileVersionInfoSizeW.argtypes = [LPWSTR, LPVOID]
+    _GetFileVersionInfoSizeW.restype  = DWORD
+    _GetFileVersionInfoSizeW.errcheck = RaiseIfZero
+
+    dwLen = _GetFileVersionInfoSizeW(lptstrFilename, None)
+    lpData = ctypes.create_string_buffer(dwLen)  # not a string!
+    _GetFileVersionInfoW(lptstrFilename, 0, dwLen, byref(lpData))
+    return lpData
