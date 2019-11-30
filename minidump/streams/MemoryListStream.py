@@ -11,12 +11,18 @@ class MINIDUMP_MEMORY_LIST:
 	def __init__(self):
 		self.NumberOfMemoryRanges = None
 		self.MemoryRanges = []
+
+	def to_bytes(self):
+		t = len(self.MemoryRanges).to_bytes(4, byteorder = 'little', signed = False)
+		for memrange in self.MemoryRanges:
+			t += memrange.to_bytes()
+		return t
 		
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MEMORY_LIST()
 		mml.NumberOfMemoryRanges = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for i in range(mml.NumberOfMemoryRanges):
+		for _ in range(mml.NumberOfMemoryRanges):
 			mml.MemoryRanges.append(MINIDUMP_MEMORY_DESCRIPTOR.parse(buff))
 		
 		return mml
@@ -37,6 +43,11 @@ class MINIDUMP_MEMORY_DESCRIPTOR:
 		#we do not use MemoryLocation but immediately store its fields in this object for easy access
 		self.DataSize = None
 		self.Rva = None
+
+	def to_bytes(self):
+		t = self.StartOfMemoryRange.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.MemoryLocation.to_bytes()
+		return t
 		
 	@staticmethod
 	def parse(buff):
@@ -65,7 +76,8 @@ class MINIDUMP_MEMORY_DESCRIPTOR:
 class MinidumpMemoryList:
 	def __init__(self):
 		self.memory_segments = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMemoryList()
 		buff.seek(dir.Location.Rva)

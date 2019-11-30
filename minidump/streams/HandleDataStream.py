@@ -14,7 +14,8 @@ class MINIDUMP_HANDLE_DATA_STREAM:
 		self.SizeOfDescriptor = None
 		self.NumberOfDescriptors = None
 		self.Reserved = None
-		
+	
+	@staticmethod
 	def parse(buff):
 		mhds = MINIDUMP_HANDLE_DATA_STREAM()
 		mhds.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -36,6 +37,7 @@ class MINIDUMP_HANDLE_DESCRIPTOR:
 		self.HandleCount = None
 		self.PointerCount = None
 	
+	@staticmethod
 	def parse(buff):
 		mhd = MINIDUMP_HANDLE_DESCRIPTOR()
 		mhd.Handle = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
@@ -61,6 +63,7 @@ class MINIDUMP_HANDLE_DESCRIPTOR_2:
 		self.ObjectInfoRva = None
 		self.Reserved0 = None
 	
+	@staticmethod
 	def parse(buff):
 		mhd = MINIDUMP_HANDLE_DESCRIPTOR_2()
 		mhd.Handle = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
@@ -93,6 +96,7 @@ class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 		#high-level, delete this when documentation becomes available!
 		self.info_bytes = None
 	
+	@staticmethod
 	def parse(buff):
 		mhoi = MINIDUMP_HANDLE_OBJECT_INFORMATION()
 		mhoi.NextInfoRva = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -107,7 +111,8 @@ class MinidumpHandleObjectInformation:
 		self.InfoType = None
 		self.SizeOfInfo = None
 		self.info_bytes = None
-		
+	
+	@staticmethod
 	def parse(mhoi, buff):
 		t = MinidumpHandleObjectInformation()
 		t.InfoType = mhoi.InfoType
@@ -131,6 +136,7 @@ class MinidumpHandleDescriptor:
 		self.PointerCount = None
 		self.ObjectInfos = []
 	
+	@staticmethod
 	def parse(t, buff):
 		mhd = MinidumpHandleDescriptor()
 		mhd.Handle = t.Handle
@@ -146,7 +152,8 @@ class MinidumpHandleDescriptor:
 			if t.ObjectInfoRva is not None and t.ObjectInfoRva != 0:
 				MinidumpHandleDescriptor.walk_objectinfo(mhd, t.ObjectInfoRva, buff)
 		return mhd
-		
+	
+	@staticmethod
 	def walk_objectinfo(mhd, start, buff):
 		while start is not None and start != 0:
 			buff.seek(start)
@@ -173,13 +180,14 @@ class MinidumpHandleDataStream:
 	def __init__(self):
 		self.header = None
 		self.handles = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpHandleDataStream()
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 		t.header = MINIDUMP_HANDLE_DATA_STREAM.parse(chunk)
-		for i in range(t.header.NumberOfDescriptors):
+		for _ in range(t.header.NumberOfDescriptors):
 			if t.header.SizeOfDescriptor == MINIDUMP_HANDLE_DESCRIPTOR.size:
 				mhd = MINIDUMP_HANDLE_DESCRIPTOR.parse(chunk)
 				t.handles.append(MinidumpHandleDescriptor.parse(mhd, buff))

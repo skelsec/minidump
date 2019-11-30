@@ -4,6 +4,14 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 	def __init__(self):
 		self.DataSize = None
 		self.Rva = None
+
+	def get_size(self):
+		return 8
+
+	def to_bytes(self):
+		t = self.DataSize.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.Rva.to_bytes(4, byteorder = 'little', signed = False)
+		return t
 	
 	@staticmethod
 	def parse(buff):
@@ -20,6 +28,14 @@ class MINIDUMP_LOCATION_DESCRIPTOR64:
 	def __init__(self):
 		self.DataSize = None
 		self.Rva = None
+
+	def get_size(self):
+		return 16
+
+	def to_bytes(self):
+		t = self.DataSize.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.Rva.to_bytes(8, byteorder = 'little', signed = False)
+		return t
 	
 	@staticmethod
 	def parse(buff):
@@ -58,7 +74,8 @@ class MinidumpMemorySegment:
 		self.size = None
 		self.end_virtual_address = None
 		self.start_file_address = None
-		
+	
+	@staticmethod
 	def parse_mini(memory_decriptor, buff):
 		"""
 		memory_descriptor: MINIDUMP_MEMORY_DESCRIPTOR
@@ -70,7 +87,8 @@ class MinidumpMemorySegment:
 		mms.start_file_address = memory_decriptor.Rva
 		mms.end_virtual_address = mms.start_virtual_address + mms.size
 		return mms
-		
+	
+	@staticmethod
 	def parse_full(memory_decriptor, buff, rva):
 		mms = MinidumpMemorySegment()
 		mms.start_virtual_address = memory_decriptor.StartOfMemoryRange
@@ -116,7 +134,8 @@ class MinidumpMemorySegment:
 			offset = marker + 1
 				
 		return fl
-		
+	
+	@staticmethod
 	def get_header():
 		t = [
 			'VA Start',

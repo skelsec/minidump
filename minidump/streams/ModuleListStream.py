@@ -17,7 +17,7 @@ class MinidumpModule:
 		self.checksum = None
 		self.timestamp = None
 		
-		
+	@staticmethod
 	def parse(mod, buff):
 		"""
 		mod: MINIDUMP_MODULE
@@ -35,7 +35,8 @@ class MinidumpModule:
 		
 	def inrange(self, memory_loc):
 		return self.baseaddress <= memory_loc < self.endaddress
-		
+	
+	@staticmethod
 	def get_header():
 		return [
 			'Module name',
@@ -72,7 +73,30 @@ class VS_FIXEDFILEINFO:
 		self.dwFileSubtype = None
 		self.dwFileDateMS = None
 		self.dwFileDateLS = None
-		
+
+	def get_size(self):
+		return 13*4
+
+	def to_bytes(self):
+		t = self.dwSignature.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwStrucVersion.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileVersionMS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileVersionLS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwProductVersionMS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwProductVersionLS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileFlagsMask.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileFlags.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileOS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileType.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileSubtype.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileDateMS.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.dwFileDateLS.to_bytes(4, byteorder = 'little', signed = False)
+		return t
+	
+	@staticmethod
+	def from_bytes(data):
+		return VS_FIXEDFILEINFO.parse(io.BytesIO(data))
+
 	@staticmethod
 	def parse(buff):
 		vf = VS_FIXEDFILEINFO()
@@ -91,19 +115,44 @@ class VS_FIXEDFILEINFO:
 		vf.dwFileDateLS = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		return vf
 
+	def __str__(self):
+		t = ''
+		for k in self.__dict__:
+			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
+		return t
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680392(v=vs.85).aspx
 class MINIDUMP_MODULE:
 	def __init__(self):
 		self.BaseOfImage = None
 		self.SizeOfImage = None
-		self.CheckSum = None
+		self.CheckSum = 0
 		self.TimeDateStamp = None
 		self.ModuleNameRva = None
 		self.VersionInfo = None
 		self.CvRecord = None
 		self.MiscRecord = None
-		self.Reserved0 = None
-		self.Reserved1 = None
+		self.Reserved0 = 0
+		self.Reserved1 = 0
+
+		#for writer
+		self.ModuleName = None
+
+	def get_size(self):
+		return 8+4+4+4+4+8+8+VS_FIXEDFILEINFO().get_size() + 2 * MINIDUMP_LOCATION_DESCRIPTOR().get_size()
+
+	def to_bytes(self):
+		t = self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.CheckSum.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.ModuleNameRva.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.VersionInfo.to_bytes()
+		t += self.CvRecord.to_bytes()
+		t += self.MiscRecord.to_bytes()
+		t += self.Reserved0.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.Reserved1.to_bytes(8, byteorder = 'little', signed = False)
+		return t
 		
 	@staticmethod
 	def parse(buff):
@@ -119,18 +168,33 @@ class MINIDUMP_MODULE:
 		mm.Reserved0 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mm.Reserved1 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		return mm
+
+	def __str__(self):
+		t = ''
+		for k in self.__dict__:
+			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
+		return t
   
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680391(v=vs.85).aspx
 class MINIDUMP_MODULE_LIST:
 	def __init__(self):
 		self.NumberOfModules = None
 		self.Modules = []
+
+	def get_size(self):
+		return 4 + len(self.Modules) * MINIDUMP_MODULE().get_size()
+
+	def to_bytes(self):
+		t = len(self.Modules).to_bytes(4, byteorder = 'little', signed = False)
+		for module in self.Modules:
+			t += module.to_bytes()
+		return t
 	
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MODULE_LIST()
 		mml.NumberOfModules = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for i in range(mml.NumberOfModules):
+		for _ in range(mml.NumberOfModules):
 			mml.Modules.append(MINIDUMP_MODULE.parse(buff))
 			
 		return mml
@@ -138,7 +202,8 @@ class MINIDUMP_MODULE_LIST:
 class MinidumpModuleList:
 	def __init__(self):
 		self.modules = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpModuleList()
 		buff.seek(dir.Location.Rva)

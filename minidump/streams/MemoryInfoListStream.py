@@ -8,6 +8,7 @@ import enum
 from minidump.common_structs import * 
 
 class AllocationProtect(enum.Enum):
+	NONE = 0
 	PAGE_EXECUTE = 0x10 #Enables execute access to the committed region of pages. An attempt to write to the committed region results in an access violation.
 						#This flag is not supported by the CreateFileMapping function.
 
@@ -64,10 +65,21 @@ class MemoryState(enum.Enum):
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680385(v=vs.85).aspx
 class MINIDUMP_MEMORY_INFO_LIST:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfEntry = None
+		self.SizeOfHeader = 16
+		self.SizeOfEntry = 48
 		self.NumberOfEntries = None
-		
+		self.entries = []
+
+	def get_size(self):
+		return self.SizeOfHeader + len(self.entries)*MINIDUMP_MEMORY_INFO().get_size()
+
+	def to_bytes(self):
+		t  = self.SizeOfHeader.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False)
+		t += len(self.entries).to_bytes(8, byteorder = 'little', signed = False)
+		return t
+	
+	@staticmethod
 	def parse(buff):
 		mhds = MINIDUMP_MEMORY_INFO_LIST()
 		mhds.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -82,13 +94,35 @@ class MINIDUMP_MEMORY_INFO:
 		self.BaseAddress = None
 		self.AllocationBase = None
 		self.AllocationProtect = None
-		self.__alignment1 = None
+		self.__alignment1 = 0
 		self.RegionSize = None
 		self.State = None
 		self.Protect = None
 		self.Type = None
-		self.__alignment2 = None
-		
+		self.__alignment2 = 0
+
+	def get_size(self):
+		return 8+8+4+4+8+4+4+4+4
+
+	def __str__(self):
+		t = ''
+		for k in self.__dict__:
+			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
+		return t
+
+	def to_bytes(self):
+		t = self.BaseAddress.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.AllocationBase.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.AllocationProtect.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.__alignment1.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.RegionSize.to_bytes(8, byteorder = 'little', signed = False)
+		t += self.State.value.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.Protect.value.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.Type.value.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.__alignment2.to_bytes(4, byteorder = 'little', signed = False)
+		return t
+	
+	@staticmethod
 	def parse(buff):
 		mmi = MINIDUMP_MEMORY_INFO()
 		mmi.BaseAddress = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
@@ -121,7 +155,8 @@ class MinidumpMemoryInfo:
 		self.State = None
 		self.Protect = None
 		self.Type = None
-		
+	
+	@staticmethod
 	def parse(t, buff):
 		mmi = MinidumpMemoryInfo()
 		mmi.BaseAddress = t.BaseAddress
@@ -132,7 +167,8 @@ class MinidumpMemoryInfo:
 		mmi.Protect = t.Protect
 		mmi.Type = t.Type
 		return mmi
-		
+	
+	@staticmethod
 	def get_header():
 		t = [
 			'BaseAddress',
@@ -144,6 +180,7 @@ class MinidumpMemoryInfo:
 			'Type',
 		]
 		return t
+
 	def to_row(self):
 		t = [
 			hex(self.BaseAddress),
@@ -161,14 +198,15 @@ class MinidumpMemoryInfoList:
 	def __init__(self):
 		self.header = None
 		self.infos = []
-		
+	
+	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMemoryInfoList()
 		buff.seek(dir.Location.Rva)
 		data = buff.read(dir.Location.DataSize)
 		chunk = io.BytesIO(data)
 		t.header = MINIDUMP_MEMORY_INFO_LIST.parse(chunk)
-		for i in range(t.header.NumberOfEntries):
+		for _ in range(t.header.NumberOfEntries):
 			mi = MINIDUMP_MEMORY_INFO.parse(chunk)
 			t.infos.append(MinidumpMemoryInfo.parse(mi, buff))
 		
