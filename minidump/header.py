@@ -14,6 +14,12 @@ class MinidumpHeader:
 		self.TimeDateStamp = 0
 		self.Flags = None
 
+	def to_buffer(self, buffer):
+		self.StreamDirectoryRva = buffer.tell() + 16 # stream directory starts right after the end of the header
+		buffer.write(self.to_bytes())
+		# no need to seek here, the directories will be serialized by the file object
+
+
 	def to_bytes(self):
 		t = self.Signature.encode('ascii')
 		t += self.Version.to_bytes(2, byteorder = 'little', signed = False)

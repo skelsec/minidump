@@ -7,6 +7,12 @@ class MINIDUMP_DIRECTORY:
 		self.StreamType = None
 		self.Location = None
 
+	def to_buffer(self, buffer):
+		"""
+		Locaton must be set for the correct location in the databuffer!
+		"""
+		buffer.write(self.to_bytes())
+
 	def to_bytes(self):
 		t = self.StreamType.value.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.Location.to_bytes()

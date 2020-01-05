@@ -70,6 +70,13 @@ class MINIDUMP_MEMORY_INFO_LIST:
 		self.NumberOfEntries = None
 		self.entries = []
 
+	def to_buffer(self, buffer):
+		buffer.write(self.SizeOfHeader.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(len(self.entries).to_bytes(8, byteorder = 'little', signed = False))
+		for ent in self.entries:
+			buffer.write(ent.to_bytes())
+
 	def get_size(self):
 		return self.SizeOfHeader + len(self.entries)*MINIDUMP_MEMORY_INFO().get_size()
 

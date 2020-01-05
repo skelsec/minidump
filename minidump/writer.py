@@ -24,22 +24,22 @@ class MinidumpSystemReader:
 	def setup(self):
 		pass
 
-	def get_sysinfo(self):
+	def get_sysinfo(self, databuffer):
 		pass
 
-	def get_modules(self):
+	def get_modules(self, databuffer):
 		pass
 
-	def get_sections(self):
+	def get_sections(self, databuffer):
 		pass
 
-	def get_memory(self):
+	def get_memory(self, buffer):
 		pass
 
-	def get_threads(self):
+	def get_threads(self, databuffer):
 		pass
 
-	def get_exceptions(self):
+	def get_exceptions(self, databuffer):
 		pass
 
 class LiveSystemReader(MinidumpSystemReader):
@@ -49,7 +49,15 @@ class LiveSystemReader(MinidumpSystemReader):
 		self.process_handle = None
 		self.sysinfo = None
 		self.meminfolist = None
+		self.streamtypes = [MINIDUMP_STREAM_TYPE.SystemInfoStream, MINIDUMP_STREAM_TYPE.ModuleListStream, MINIDUMP_STREAM_TYPE.MemoryInfoListStream, MINIDUMP_STREAM_TYPE.Memory64ListStream]
 		self.setup()
+
+	def get_available_directories(self):
+		for st in self.streamtypes:
+			memdir = MINIDUMP_DIRECTORY()
+			memdir.Location = 0 #location is not needed, only the type
+			memdir.StreamType = st
+			yield memdir
 
 	def open_process(self):
 		self.process_handle = OpenProcess(PROCESS_ALL_ACCESS, False, self.pid)
@@ -57,7 +65,7 @@ class LiveSystemReader(MinidumpSystemReader):
 	def setup(self):
 		self.open_process()
 
-	def get_sysinfo(self):
+	def get_sysinfo(self, databuffer):
 		#https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
 		sysinfo_raw = GetSystemInfo()
 		version_raw = GetVersionExW()
@@ -88,13 +96,13 @@ class LiveSystemReader(MinidumpSystemReader):
 			sysinfo.AMDExtendedCpuFeatures = 0
 		else:
 			sysinfo.ProcessorFeatures = [0,0]
+		
+		self.sysinfo_raw = sysinfo_raw #other functions will be using data from sysinfo so we need to store it!
+		sysinfo.to_buffer(databuffer)
+		
 
-		self.sysinfo_raw = sysinfo_raw
 
-		return sysinfo
-
-
-	def get_modules(self):
+	def get_modules(self, databuffer):
 		#https://docs.microsoft.com/en-us/windows/win32/psapi/enumerating-all-modules-for-a-process
 		#https://docs.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodules
 		#
@@ -119,12 +127,10 @@ class LiveSystemReader(MinidumpSystemReader):
 
 			module_list.Modules.append(mmod)
 		
-		return module_list
+		module_list.to_buffer(databuffer)
 
-	def get_sections(self):
+	def get_sections(self, databuffer):
 		#https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualqueryex
-		if self.sysinfo_raw is None:
-			self.get_sysinfo()
 		meminfolist = MINIDUMP_MEMORY_INFO_LIST()
 		i = self.sysinfo_raw.lpMinimumApplicationAddress
 		while i < self.sysinfo_raw.lpMaximumApplicationAddress:
@@ -152,15 +158,15 @@ class LiveSystemReader(MinidumpSystemReader):
 			
 			i += mi_raw.RegionSize
 		self.meminfolist = meminfolist
-		return meminfolist
+		meminfolist.to_buffer(databuffer)
 	
-	def get_threads(self):
+	def get_threads(self, databuffer):
 		pass
 
-	def get_exceptions(self):
+	def get_exceptions(self, databuffer):
 		pass
 
-	def get_memory(self):
+	def get_memory(self, buffer):
 		read_flags = [AllocationProtect.PAGE_EXECUTE_READ,
 				AllocationProtect.PAGE_EXECUTE_READWRITE,
 				AllocationProtect.PAGE_READONLY,
@@ -180,136 +186,140 @@ class LiveSystemReader(MinidumpSystemReader):
 				memlist.MemoryRanges.append(memdesc)
 
 		return memlist
-
-
-class MinidumpWriter:
-	def __init__(self,sysreader):
-		self.sysreader = sysreader
-		self.output_file = None
-
-		self.streams = {} #stream type -> list of stream objects
-
-		self.header = None
-		self.directory_list = []
-		self.directory_rva = 28
-		self.header_size = None
-
-		self.header_buffer = io.BytesIO()
-		self.data_buffer = io.BytesIO()
-
-	def prepare_header(self):
-		self.header = MinidumpHeader()
-		self.header.Version = 1
-		self.header.ImplementationVersion = 1
-		self.header.NumberOfStreams = len(self.streams) +1 # +1 is fot he memory info stream
-		self.header.StreamDirectoryRva = self.directory_rva
-		#self.header.CheckSum = None
-		#self.header.Reserved = None
-		#self.header.TimeDateStamp = None
-		self.header.Flags = MINIDUMP_TYPE.MiniDumpWithFullMemory
-		self.header_buffer.write(self.header.to_bytes())
-
-	def prepare_directory(self):
-		curr_pos = self.header_size
-		for streamtype in self.streams:
-			self.streams[streamtype].to_bytes(self.data_buffer)
-			directory = MINIDUMP_DIRECTORY()
-			directory.StreamType = streamtype
-			directory.Location = curr_pos
-			self.header_buffer.write(directory.to_bytes())
-
-	def finalize_header(self):
-		# currently only using the 32 bit MINIDUMP_LOCATION_DESCRIPTOR, this is because we expect that the header 
-		# and any data in the header (including all streams data except memory stream) will not be bigger than 4GB
-		# memory stream is a special case, as it cvan be longer than 4GB but the RVA to the beginning of the memory stream 
-		# is not expected to be bigger than 4G max.
-		# if this becomes the case then this all will fail :)
-		header_size = 28
-		header_size += len(self.streams) * 8 #this is for the dictionary itself, not the streams
-		for stream in self.streams:
-			header_size += self.streams[stream].get_size()
-		
-		header_size += 10 * 1024 #allocating 10k for the memory info
-
-		self.prepare_header()
-		self.prepare_directory()
-
-		
-		
-		
-
-	def create_streams(self):
-		sysinfo = self.sysreader.get_sysinfo()
-		self.streams[MINIDUMP_STREAM_TYPE.SystemInfoStream] = sysinfo
-
-		print(str(sysinfo))
-		moduleinfo = self.sysreader.get_modules()
-		self.streams[MINIDUMP_STREAM_TYPE.ModuleListStream] = moduleinfo
-		
-		sections = self.sysreader.get_sections()
-		self.streams[MINIDUMP_STREAM_TYPE.MemoryInfoListStream] = sections
-		
-		self.finalize_header()
-
-		memory = self.sysreader.get_memory()
-		
-		
-	#def get_total_streams_cnt(self):
-	#	total = 0
-	#	for t in self.streams:
-	#		total += len(t)
-	#	return total
-
-	
-
-		
-
-	#def construct_directory(self):
-	#
-	#	total_streams = self.get_total_streams_cnt()
-	#
-	#	for stype in self.streams:			
-	#		for stream in self.streams[stype]:
-	#			
-	#			stream
-	#
-	#			loc = MINIDUMP_LOCATION_DESCRIPTOR()
-	#			loc.DataSize = 0
-	#			loc.Rva = 0
-	#			directory = MINIDUMP_DIRECTORY()
-	#			directory.StreamType = stream
-	#			self.directory.append()
-
-
-	def write_header(self):
-		hdr_pos = self.hdr_buff.tell()
-		self.hdr_buff.seek(0,0)
-		self.hdr_buff.write(self.construct_header())
-		self.hdr_buff.seek(hdr_pos, 0)
-		return
-
-
-	def construct_directory(self):
-		self.sysreader.get_sysinfo(self.hdr_buff, self.data_buff)
-		self.stream_cnt += 1
-		#modules
-		#self.sysreader.get_modules(self.hdr_buff, self.data_buff)
-		#self.stream_cnt += 1
-		
-		#write header
-		self.write_header()
-		
-
-		#append datastream for memory, with correct rva
-		
-		#dump memory
-
-	def run(self):
-		self.create_streams()
-
-
+#
+#
+#class MinidumpWriter:
+#	def __init__(self,sysreader):
+#		self.sysreader = sysreader
+#		self.output_file = None
+#
+#		self.streams = {} #stream type -> list of stream objects
+#
+#		self.header = None
+#		self.directory_list = []
+#		self.directory_rva = 28
+#		self.header_size = None
+#
+#		self.header_buffer = io.BytesIO()
+#		self.data_buffer = io.BytesIO()
+#
+#	def prepare_header(self):
+#		self.header = MinidumpHeader()
+#		self.header.Version = 1
+#		self.header.ImplementationVersion = 1
+#		self.header.NumberOfStreams = len(self.streams) +1 # +1 is fot he memory info stream
+#		self.header.StreamDirectoryRva = self.directory_rva
+#		#self.header.CheckSum = None
+#		#self.header.Reserved = None
+#		#self.header.TimeDateStamp = None
+#		self.header.Flags = MINIDUMP_TYPE.MiniDumpWithFullMemory
+#		self.header_buffer.write(self.header.to_bytes())
+#
+#	def prepare_directory(self):
+#		curr_pos = self.header_size
+#		for streamtype in self.streams:
+#			self.streams[streamtype].to_bytes(self.data_buffer)
+#			directory = MINIDUMP_DIRECTORY()
+#			directory.StreamType = streamtype
+#			directory.Location = curr_pos
+#			self.header_buffer.write(directory.to_bytes())
+#
+#	def finalize_header(self):
+#		# currently only using the 32 bit MINIDUMP_LOCATION_DESCRIPTOR, this is because we expect that the header 
+#		# and any data in the header (including all streams data except memory stream) will not be bigger than 4GB
+#		# memory stream is a special case, as it cvan be longer than 4GB but the RVA to the beginning of the memory stream 
+#		# is not expected to be bigger than 4G max.
+#		# if this becomes the case then this all will fail :)
+#		header_size = 28
+#		header_size += len(self.streams) * 8 #this is for the dictionary itself, not the streams
+#		for stream in self.streams:
+#			header_size += self.streams[stream].get_size()
+#		
+#		header_size += 10 * 1024 #allocating 10k for the memory info
+#
+#		self.prepare_header()
+#		self.prepare_directory()
+#
+#		
+#		
+#		
+#
+#	def create_streams(self):
+#		sysinfo = self.sysreader.get_sysinfo()
+#		self.streams[MINIDUMP_STREAM_TYPE.SystemInfoStream] = sysinfo
+#
+#		print(str(sysinfo))
+#		moduleinfo = self.sysreader.get_modules()
+#		self.streams[MINIDUMP_STREAM_TYPE.ModuleListStream] = moduleinfo
+#		
+#		sections = self.sysreader.get_sections()
+#		self.streams[MINIDUMP_STREAM_TYPE.MemoryInfoListStream] = sections
+#		
+#		self.finalize_header()
+#
+#		memory = self.sysreader.get_memory()
+#		
+#		
+#	#def get_total_streams_cnt(self):
+#	#	total = 0
+#	#	for t in self.streams:
+#	#		total += len(t)
+#	#	return total
+#
+#	
+#
+#		
+#
+#	#def construct_directory(self):
+#	#
+#	#	total_streams = self.get_total_streams_cnt()
+#	#
+#	#	for stype in self.streams:			
+#	#		for stream in self.streams[stype]:
+#	#			
+#	#			stream
+#	#
+#	#			loc = MINIDUMP_LOCATION_DESCRIPTOR()
+#	#			loc.DataSize = 0
+#	#			loc.Rva = 0
+#	#			directory = MINIDUMP_DIRECTORY()
+#	#			directory.StreamType = stream
+#	#			self.directory.append()
+#
+#
+#	def write_header(self):
+#		hdr_pos = self.hdr_buff.tell()
+#		self.hdr_buff.seek(0,0)
+#		self.hdr_buff.write(self.construct_header())
+#		self.hdr_buff.seek(hdr_pos, 0)
+#		return
+#
+#
+#	def construct_directory(self):
+#		self.sysreader.get_sysinfo(self.hdr_buff, self.data_buff)
+#		self.stream_cnt += 1
+#		#modules
+#		#self.sysreader.get_modules(self.hdr_buff, self.data_buff)
+#		#self.stream_cnt += 1
+#		
+#		#write header
+#		self.write_header()
+#		
+#
+#		#append datastream for memory, with correct rva
+#		
+#		#dump memory
+#
+#	def run(self):
+#		self.create_streams()
+#
+#
 if __name__ == '__main__':
+	from minidump.minidumpfile import MinidumpFile
 	pid = 9600
 	sysreader = LiveSystemReader(pid)
-	writer = MinidumpWriter(sysreader)
-	writer.run()
+	with open('test.dmp', 'wb') as f:
+		mf = MinidumpFile()
+		mf.writer = sysreader
+		mf.to_buffer(f)
+

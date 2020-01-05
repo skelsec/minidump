@@ -88,48 +88,40 @@ class MINIDUMP_SYSTEM_INFO:
 		#for wrtier
 		self.CSDVersion = None
 
-	def get_size(self):
-		# here we cannot tell upfront what the size will be :(
-		return len(self.to_bytes())
+	def to_buffer(self, buffer):
+		buffer.write(self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False))
+		#missing filed here?
+		buffer.write(self.NumberOfProcessors.to_bytes(1, byteorder = 'little', signed = False))
+		buffer.write(self.ProductType.value.to_bytes(1, byteorder = 'little', signed = False))
+		buffer.write(self.MajorVersion.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.PlatformId.to_bytes(4, byteorder = 'little', signed = False))
 
-	def to_bytes(self, data_buffer = None):
-		t = self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False)
-		#missing filed here?
-		t += self.NumberOfProcessors.to_bytes(1, byteorder = 'little', signed = False)
-		t += self.ProductType.value.to_bytes(1, byteorder = 'little', signed = False)
-		t += self.MajorVersion.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.PlatformId.to_bytes(4, byteorder = 'little', signed = False)
-		if data_buffer is None:
-			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
-		else:
-			pos = data_buffer.tell()
-			data_buffer.write(100*b'\x00')
-			self.CSDVersionRva = data_buffer.tell()
-			data_buffer.write(self.CSDVersion.encode('ascii') + b'\x00')
-			pos_end = data_buffer.tell()
-			data_buffer.seek(pos,0)
-			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
-		#missing filed here?
-		t += self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.Reserved2.to_bytes(2, byteorder = 'little', signed = False)
+		rva_1_pos = buffer.tell()
+		buffer.write(b'\x00'*4) #we set it to zeroes, then come back later to give the correct RVA
+
+		buffer.write(self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.Reserved2.to_bytes(2, byteorder = 'little', signed = False))
 		if self.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
 			for vid in self.VendorId:
-				t += vid.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.VersionInformation.value.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.FeatureInformation.value.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False)
+				buffer.write(vid.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.VersionInformation.value.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.FeatureInformation.value.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False))
 		else:
 			for pf in self.ProcessorFeatures:
-				t += pf.to_bytes(8, byteorder = 'little', signed = False)
-		
-		if data_buffer is None:
-			return t
-		else:
-			data_buffer.write(t)
+				buffer.write(pf.to_bytes(8, byteorder = 'little', signed = False))
+
+		#adding actual data, and writing the correct RVA for rva_1_pos
+		rva1 = buffer.tell()
+		buffer.seek(rva_1_pos, 0)
+		buffer.write(rva1.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.seek(rva1, 0)
+		buffer.write(MINIDUMP_STRING(self.CSDVersion).to_bytes())
+
 		
 	@staticmethod
 	def parse(buff):

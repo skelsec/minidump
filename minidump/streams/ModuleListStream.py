@@ -74,7 +74,8 @@ class VS_FIXEDFILEINFO:
 		self.dwFileDateMS = None
 		self.dwFileDateLS = None
 
-	def get_size(self):
+	@staticmethod
+	def get_size():
 		return 13*4
 
 	def to_bytes(self):
@@ -138,22 +139,40 @@ class MINIDUMP_MODULE:
 		#for writer
 		self.ModuleName = None
 
-	def get_size(self):
-		return 8+4+4+4+4+8+8+VS_FIXEDFILEINFO().get_size() + 2 * MINIDUMP_LOCATION_DESCRIPTOR().get_size()
-
-	def to_bytes(self):
-		t = self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.CheckSum.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.ModuleNameRva.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.VersionInfo.to_bytes()
-		t += self.CvRecord.to_bytes()
-		t += self.MiscRecord.to_bytes()
-		t += self.Reserved0.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.Reserved1.to_bytes(8, byteorder = 'little', signed = False)
-		return t
+	def to_buffer(self, buffer):
+		#beware: MINIDUMP_LOCATION_DESCRIPTOR is used here regardless that sometimes data might be stored above 4GB. FIXME
+		buffer.write(self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.CheckSum.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False))
+		rva_modname = buffer.tell() + 32 + VS_FIXEDFILEINFO.get_size()
+		data_modname = MINIDUMP_STRING(self.ModuleName).to_bytes()
+		buffer.write(rva_modname.to_bytes(4, byteorder = 'little', signed = False))		
+		buffer.write(self.VersionInfo.to_bytes())
+		data_cvrecord = b''
+		if self.CvRecord is not None:
+			data_cvrecord = self.CvRecord.to_bytes()
+			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(len(data_cvrecord), 24 + buffer.tell() + len(data_modname)))
+		else:
+			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(0, 0).to_bytes())
 		
+		data_miscrecord = b''
+		if self.MiscRecord is not None:
+			data_miscrecord = self.MiscRecord.to_bytes()
+			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(len(data_miscrecord), 16 + buffer.tell() + len(data_modname) + len(data_cvrecord)))
+		else:
+			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(0, 0).to_bytes())
+		buffer.write(self.Reserved0.to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.Reserved1.to_bytes(8, byteorder = 'little', signed = False))
+		
+		#RVAs
+		buffer.write(data_modname)
+		if self.CvRecord is not None:
+			buffer.write(data_cvrecord)
+		if self.MiscRecord is not None:
+			buffer.write(data_miscrecord)
+
+
 	@staticmethod
 	def parse(buff):
 		mm = MINIDUMP_MODULE()
@@ -181,14 +200,10 @@ class MINIDUMP_MODULE_LIST:
 		self.NumberOfModules = None
 		self.Modules = []
 
-	def get_size(self):
-		return 4 + len(self.Modules) * MINIDUMP_MODULE().get_size()
-
-	def to_bytes(self):
-		t = len(self.Modules).to_bytes(4, byteorder = 'little', signed = False)
+	def to_buffer(self, buffer):
+		buffer.write(len(self.Modules).to_bytes(4, byteorder = 'little', signed = False))
 		for module in self.Modules:
-			t += module.to_bytes()
-		return t
+			t += module.to_buffer(buffer)
 	
 	@staticmethod
 	def parse(buff):

@@ -16,7 +16,7 @@ from minidump.streams import *
 from minidump.common_structs import *
 from minidump.constants import MINIDUMP_STREAM_TYPE
 from minidump.directory import MINIDUMP_DIRECTORY
-
+from minidump.constants import MINIDUMP_TYPE
 
 class MinidumpFile:
 	def __init__(self):
@@ -39,6 +39,60 @@ class MinidumpFile:
 		self.misc_info = None
 		self.memory_info = None
 		self.thread_info = None
+
+		self.writer = None
+
+	def to_buffer(self, buffer):
+		"""
+		Serializes the contents of the minidumpfile to a buffer/file handle
+		Writer must be already specified!
+		"""
+		databuffer = io.BytesIO() # data buffer is where the actual directory data will be stored, except the full memory dump!
+		mem64_present = False
+		mem_present = False
+
+		self.header = MinidumpHeader()
+		self.header.Version = 1
+		self.header.ImplementationVersion = 1
+		self.header.NumberOfStreams = len([self.writer.get_available_directories])
+		self.header.Flags = MINIDUMP_TYPE.MiniDumpWithFullMemory
+		
+		hdr_bytes = self.header.to_bytes()
+		buffer.write(hdr_bytes)
+		databuffer.write(b'\x00' * len(hdr_bytes))
+		for directory in self.writer.get_available_directories:
+			databuffer.write(b'\x00' * 8)
+		
+		for directory in self.writer.get_available_directories:
+			directory.Location = databuffer.tell()
+			if directory.StreamType == MINIDUMP_STREAM_TYPE.SystemInfoStream:
+				self.writer.get_sysinfo(databuffer)
+			elif directory.StreamType == MINIDUMP_STREAM_TYPE.ModuleListStream:
+				self.writer.get_modules(databuffer)
+			elif directory.StreamType == MINIDUMP_STREAM_TYPE.MemoryInfoListStream:
+				self.writer.get_sections(databuffer)
+			elif directory.StreamType == MINIDUMP_STREAM_TYPE.Memory64ListStream:
+				mem64_present = True
+				continue #skipping this!
+			elif directory.StreamType == MINIDUMP_STREAM_TYPE.MemoryListStream:
+				mem_present = True
+				continue #skipping this!
+
+			directory.to_buffer(buffer)
+
+		if mem64_present is True:
+			# if memory is present, we add one more directory entry to the directory list, and finalize the header
+			memdir = MINIDUMP_DIRECTORY()
+			memdir.Location = databuffer.tell()
+			memdir.StreamType = MINIDUMP_STREAM_TYPE.Memory64ListStream
+			memdir.to_buffer(buffer)
+			databuffer.seek(0,0)
+			buffer.write(databuffer.read())
+			self.writer.get_memory(buffer) # here we use the merged buffer (or the actual file) because memory to dump might be huge
+			return
+
+		elif mem_present is True:
+			raise Exception('Not yet implemented!')
 
 	@staticmethod
 	def parse(filename):
