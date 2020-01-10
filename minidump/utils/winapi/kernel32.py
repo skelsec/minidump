@@ -178,4 +178,249 @@ def ReadProcessMemory(hProcess, lpBaseAddress, nSize):
     success = _ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, byref(lpNumberOfBytesRead))
     if not success and GetLastError() != ERROR_PARTIAL_COPY:
         raise ctypes.WinError()
-    return str(lpBuffer.raw)[:lpNumberOfBytesRead.value]
+    #return str(lpBuffer.raw)[:lpNumberOfBytesRead.value]
+    return lpBuffer.raw[:lpNumberOfBytesRead.value]
+
+
+#--- Toolhelp library defines and structures ----------------------------------
+
+TH32CS_SNAPHEAPLIST = 0x00000001
+TH32CS_SNAPPROCESS  = 0x00000002
+TH32CS_SNAPTHREAD   = 0x00000004
+TH32CS_SNAPMODULE   = 0x00000008
+TH32CS_INHERIT      = 0x80000000
+TH32CS_SNAPALL      = (TH32CS_SNAPHEAPLIST | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD | TH32CS_SNAPMODULE)
+
+# typedef struct tagTHREADENTRY32 {
+#   DWORD dwSize;
+#   DWORD cntUsage;
+#   DWORD th32ThreadID;
+#   DWORD th32OwnerProcessID;
+#   LONG tpBasePri;
+#   LONG tpDeltaPri;
+#   DWORD dwFlags;
+# } THREADENTRY32,  *PTHREADENTRY32;
+class THREADENTRY32(Structure):
+    _fields_ = [
+        ('dwSize',             DWORD),
+        ('cntUsage',           DWORD),
+        ('th32ThreadID',       DWORD),
+        ('th32OwnerProcessID', DWORD),
+        ('tpBasePri',          LONG),
+        ('tpDeltaPri',         LONG),
+        ('dwFlags',            DWORD),
+    ]
+LPTHREADENTRY32 = POINTER(THREADENTRY32)
+
+# typedef struct tagPROCESSENTRY32 {
+#    DWORD dwSize;
+#    DWORD cntUsage;
+#    DWORD th32ProcessID;
+#    ULONG_PTR th32DefaultHeapID;
+#    DWORD th32ModuleID;
+#    DWORD cntThreads;
+#    DWORD th32ParentProcessID;
+#    LONG pcPriClassBase;
+#    DWORD dwFlags;
+#    TCHAR szExeFile[MAX_PATH];
+# } PROCESSENTRY32,  *PPROCESSENTRY32;
+class PROCESSENTRY32(Structure):
+    _fields_ = [
+        ('dwSize',              DWORD),
+        ('cntUsage',            DWORD),
+        ('th32ProcessID',       DWORD),
+        ('th32DefaultHeapID',   ULONG_PTR),
+        ('th32ModuleID',        DWORD),
+        ('cntThreads',          DWORD),
+        ('th32ParentProcessID', DWORD),
+        ('pcPriClassBase',      LONG),
+        ('dwFlags',             DWORD),
+        ('szExeFile',           TCHAR * 260),
+    ]
+LPPROCESSENTRY32 = POINTER(PROCESSENTRY32)
+
+# typedef struct tagPROCESSENTRY32W {
+#    DWORD dwSize;
+#    DWORD cntUsage;
+#    DWORD th32ProcessID;
+#    ULONG_PTR th32DefaultHeapID;
+#    DWORD th32ModuleID;
+#    DWORD cntThreads;
+#    DWORD th32ParentProcessID;
+#    LONG pcPriClassBase;
+#    DWORD dwFlags;
+#    WCHAR szExeFile[MAX_PATH];
+# } PROCESSENTRY32W,  *PPROCESSENTRY32W;
+class PROCESSENTRY32W(Structure):
+    _fields_ = [
+        ('dwSize',              DWORD),
+        ('cntUsage',            DWORD),
+        ('th32ProcessID',       DWORD),
+        ('th32DefaultHeapID',   ULONG_PTR),
+        ('th32ModuleID',        DWORD),
+        ('cntThreads',          DWORD),
+        ('th32ParentProcessID', DWORD),
+        ('pcPriClassBase',      LONG),
+        ('dwFlags',             DWORD),
+        ('szExeFile',           WCHAR * 260),
+    ]
+LPPROCESSENTRY32W = POINTER(PROCESSENTRY32W)
+
+
+
+# typedef struct tagMODULEENTRY32 {
+#   DWORD dwSize;
+#   DWORD th32ModuleID;
+#   DWORD th32ProcessID;
+#   DWORD GlblcntUsage;
+#   DWORD ProccntUsage;
+#   BYTE* modBaseAddr;
+#   DWORD modBaseSize;
+#   HMODULE hModule;
+#   TCHAR szModule[MAX_MODULE_NAME32 + 1];
+#   TCHAR szExePath[MAX_PATH];
+# } MODULEENTRY32,  *PMODULEENTRY32;
+class MODULEENTRY32(Structure):
+    _fields_ = [
+        ("dwSize",        DWORD),
+        ("th32ModuleID",  DWORD),
+        ("th32ProcessID", DWORD),
+        ("GlblcntUsage",  DWORD),
+        ("ProccntUsage",  DWORD),
+        ("modBaseAddr",   LPVOID),  # BYTE*
+        ("modBaseSize",   DWORD),
+        ("hModule",       HMODULE),
+        ("szModule",      TCHAR * (MAX_MODULE_NAME32 + 1)),
+        ("szExePath",     TCHAR * MAX_PATH),
+    ]
+LPMODULEENTRY32 = POINTER(MODULEENTRY32)
+
+# typedef struct tagHEAPENTRY32 {
+#   SIZE_T    dwSize;
+#   HANDLE    hHandle;
+#   ULONG_PTR dwAddress;
+#   SIZE_T    dwBlockSize;
+#   DWORD     dwFlags;
+#   DWORD     dwLockCount;
+#   DWORD     dwResvd;
+#   DWORD     th32ProcessID;
+#   ULONG_PTR th32HeapID;
+# } HEAPENTRY32,
+# *PHEAPENTRY32;
+class HEAPENTRY32(Structure):
+    _fields_ = [
+        ("dwSize",          SIZE_T),
+        ("hHandle",         HANDLE),
+        ("dwAddress",       ULONG_PTR),
+        ("dwBlockSize",     SIZE_T),
+        ("dwFlags",         DWORD),
+        ("dwLockCount",     DWORD),
+        ("dwResvd",         DWORD),
+        ("th32ProcessID",   DWORD),
+        ("th32HeapID",      ULONG_PTR),
+]
+LPHEAPENTRY32 = POINTER(HEAPENTRY32)
+
+# typedef struct tagHEAPLIST32 {
+#   SIZE_T    dwSize;
+#   DWORD     th32ProcessID;
+#   ULONG_PTR th32HeapID;
+#   DWORD     dwFlags;
+# } HEAPLIST32,
+#  *PHEAPLIST32;
+class HEAPLIST32(Structure):
+    _fields_ = [
+        ("dwSize",          SIZE_T),
+        ("th32ProcessID",   DWORD),
+        ("th32HeapID",      ULONG_PTR),
+        ("dwFlags",         DWORD),
+]
+LPHEAPLIST32 = POINTER(HEAPLIST32)
+
+#   __in  DWORD dwFlags,
+#   __in  DWORD th32ProcessID
+# );
+def CreateToolhelp32Snapshot(dwFlags = TH32CS_SNAPALL, th32ProcessID = 0):
+    _CreateToolhelp32Snapshot = windll.kernel32.CreateToolhelp32Snapshot
+    _CreateToolhelp32Snapshot.argtypes = [DWORD, DWORD]
+    _CreateToolhelp32Snapshot.restype  = HANDLE
+
+    hSnapshot = _CreateToolhelp32Snapshot(dwFlags, th32ProcessID)
+    if hSnapshot == INVALID_HANDLE_VALUE:
+        raise ctypes.WinError()
+    return hSnapshot
+
+# BOOL WINAPI Heap32ListFirst(
+#   __in     HANDLE hSnapshot,
+#   __inout  LPHEAPLIST32 lphl
+# );
+def Heap32ListFirst(hSnapshot):
+    _Heap32ListFirst = windll.kernel32.Heap32ListFirst
+    _Heap32ListFirst.argtypes = [HANDLE, LPHEAPLIST32]
+    _Heap32ListFirst.restype  = bool
+
+    hl = HEAPLIST32()
+    hl.dwSize = sizeof(HEAPLIST32)
+    success = _Heap32ListFirst(hSnapshot, byref(hl))
+    if not success:
+        if GetLastError() == ERROR_NO_MORE_FILES:
+            return None
+        raise ctypes.WinError()
+    return hl
+
+# BOOL WINAPI Heap32ListNext(
+#   __in     HANDLE hSnapshot,
+#   __out  LPHEAPLIST32 lphl
+# );
+def Heap32ListNext(hSnapshot, hl = None):
+    _Heap32ListNext = windll.kernel32.Heap32ListNext
+    _Heap32ListNext.argtypes = [HANDLE, LPHEAPLIST32]
+    _Heap32ListNext.restype  = bool
+
+    if hl is None:
+        hl = HEAPLIST32()
+    hl.dwSize = sizeof(HEAPLIST32)
+    success = _Heap32ListNext(hSnapshot, byref(hl))
+    if not success:
+        if GetLastError() == ERROR_NO_MORE_FILES:
+            return None
+        raise ctypes.WinError()
+    return hl
+
+
+# BOOL WINAPI Thread32First(
+#   __in     HANDLE hSnapshot,
+#   __inout  LPTHREADENTRY32 lpte
+# );
+def Thread32First(hSnapshot):
+    _Thread32First = windll.kernel32.Thread32First
+    _Thread32First.argtypes = [HANDLE, LPTHREADENTRY32]
+    _Thread32First.restype  = bool
+
+    te = THREADENTRY32()
+    te.dwSize = sizeof(THREADENTRY32)
+    success = _Thread32First(hSnapshot, byref(te))
+    if not success:
+        if GetLastError() == ERROR_NO_MORE_FILES:
+            return None
+        raise ctypes.WinError()
+    return te
+
+# BOOL WINAPI Thread32Next(
+#   __in     HANDLE hSnapshot,
+#   __out  LPTHREADENTRY32 lpte
+# );
+def Thread32Next(hSnapshot, te = None):
+    _Thread32Next = windll.kernel32.Thread32Next
+    _Thread32Next.argtypes = [HANDLE, LPTHREADENTRY32]
+    _Thread32Next.restype  = bool
+
+    if te is None:
+        te = THREADENTRY32()
+    te.dwSize = sizeof(THREADENTRY32)
+    success = _Thread32Next(hSnapshot, byref(te))
+    if not success:
+        if GetLastError() == ERROR_NO_MORE_FILES:
+            return None
+        raise ctypes.WinError()
+    return te

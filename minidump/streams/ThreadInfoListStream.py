@@ -19,15 +19,14 @@ class DumpFlags(enum.Enum):
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680506(v=vs.85).aspx
 class MINIDUMP_THREAD_INFO_LIST:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfEntry = None
+		self.SizeOfHeader = 12
+		self.SizeOfEntry = 64
 		self.NumberOfEntries = None
 	
-	def to_bytes(self):
-		t = self.SizeOfHeader.value.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False)
-		return t
+	def to_buffer(self, buffer):
+		buffer.write(self.SizeOfHeader.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False))
 
 	@staticmethod
 	def parse(buff):
@@ -35,7 +34,6 @@ class MINIDUMP_THREAD_INFO_LIST:
 		mtil.SizeOfHeader = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mtil.SizeOfEntry = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mtil.NumberOfEntries = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		
 		return mtil
 		
 	

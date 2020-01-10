@@ -10,15 +10,14 @@ from minidump.common_structs import *
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680521(v=vs.85).aspx
 class MINIDUMP_UNLOADED_MODULE_LIST:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfEntry = None
+		self.SizeOfHeader = 12
+		self.SizeOfEntry = 24
 		self.NumberOfEntries = None
 
-	def to_bytes(self):
-		t  = self.SizeOfHeader.value.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False)
-		return t
+	def to_buffer(self, buffer):
+		buffer.write(self.SizeOfHeader.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False))
 	
 	@staticmethod
 	def parse(buff):

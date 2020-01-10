@@ -13,11 +13,10 @@ class MINIDUMP_THREAD_LIST:
 		self.NumberOfThreads = None
 		self.Threads = []
 
-	def to_bytes(self):
-		t = len(self.Threads).to_bytes(4, byteorder = 'little', signed = False)
+	def to_buffer(self, buffer):
+		buffer.write(len(self.Threads).to_bytes(4, byteorder = 'little', signed = False))
 		for th in self.Threads:
-			t += th.to_bytes()
-		return t
+			th.to_buffer(buffer)
 	
 	@staticmethod
 	def parse(buff):

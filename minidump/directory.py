@@ -2,6 +2,8 @@
 from minidump.constants import MINIDUMP_STREAM_TYPE
 from minidump.common_structs import MINIDUMP_LOCATION_DESCRIPTOR
 
+import io
+
 class MINIDUMP_DIRECTORY:
 	def __init__(self):
 		self.StreamType = None
@@ -43,3 +45,85 @@ class MINIDUMP_DIRECTORY:
 	def __str__(self):
 		t = 'StreamType: %s %s' % (self.StreamType, self.Location)
 		return t
+
+
+class DirectoryBuffer:
+	def __init__(self, offset = 0):
+		self.offset = offset
+		self.buffer = io.BytesIO()
+		self.databuffer = io.BytesIO()
+
+		self.rvas = [] #ptr_position_in_buffer, data_pos_in_databuffer
+		self.lds = [] # pos, size
+
+	def write_rva(self, data):
+		"""
+		Stores the data in databuffer and returns an RVA position relative to buffer's start
+		"""
+		#pos = self.buffer.tell() + self.databuffer.tell() + self.offset
+		#self.databuffer.write(data)
+		#self.buffer.write(pos.to_bytes(4, byteorder = 'little', signed = False))
+		
+		data_pos = self.databuffer.tell()
+		self.databuffer.write(data)
+		ptr_pos = self.buffer.tell()
+		self.buffer.write(b'\x00' * 4)
+		self.rvas.append((ptr_pos, data_pos))
+		return
+
+	def write_ld(self, data):
+		#"""
+		#writes a location descriptor to the buffer and the actual data to the databuffer
+		#"""
+
+		#pos = self.buffer.tell() + self.databuffer.tell() + self.offset
+		#ld = MINIDUMP_LOCATION_DESCRIPTOR(len(data), pos)
+		#self.databuffer.write(data)
+		#self.buffer.write(ld.to_bytes())
+		
+		data_pos = self.databuffer.tell()
+		self.databuffer.write(data)
+		ptr_pos = self.buffer.tell()
+		self.buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(0,0).to_bytes())
+		self.lds.append((ptr_pos, data_pos, len(data)))
+		
+		return
+
+	def write_data(self, data):
+		return self.databuffer.write(data)
+
+	def write(self, data):
+		return self.buffer.write(data)
+	
+	def tell(self):
+		return self.buffer.tell()
+
+	def seek(self, pos, whence):
+		print('Seek is not advised!')
+		return self.buffer.seek(pos, whence)
+
+	def read(self, count = 1):
+		return self.buffer.read(count)
+
+	def finalize(self):
+		self.databuffer.seek(0,0)
+		buffer_end = self.buffer.tell() + self.offset
+		for ptr_pos, data_pos in self.rvas:
+			final_pos = data_pos + buffer_end - 0x10 # TODO! figure out the offset?
+			self.buffer.seek(ptr_pos)
+			self.buffer.write(final_pos.to_bytes(4, byteorder ='little', signed= False))
+
+		for ptr_pos, data_pos, data_size in self.lds:
+			final_pos = data_pos + buffer_end - 0x10 # TODO! figure out the offset?
+			self.buffer.seek(ptr_pos)
+			self.buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(data_size, final_pos).to_bytes())
+
+		self.buffer.write(self.databuffer.read())
+		self.databuffer = None
+		self.buffer.seek(0,0)
+		return self.buffer.read()
+
+
+
+		
+			

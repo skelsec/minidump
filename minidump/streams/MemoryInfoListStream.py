@@ -8,7 +8,6 @@ import enum
 from minidump.common_structs import * 
 
 class AllocationProtect(enum.Enum):
-	NONE = 0
 	PAGE_EXECUTE = 0x10 #Enables execute access to the committed region of pages. An attempt to write to the committed region results in an access violation.
 						#This flag is not supported by the CreateFileMapping function.
 
@@ -123,9 +122,18 @@ class MINIDUMP_MEMORY_INFO:
 		t += self.AllocationProtect.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.__alignment1.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.RegionSize.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.State.value.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.Protect.value.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.Type.value.to_bytes(4, byteorder = 'little', signed = False)
+		if isinstance(self.State, int):
+			t += self.State.to_bytes(4, byteorder = 'little', signed = False)
+		else:
+			t += self.State.value.to_bytes(4, byteorder = 'little', signed = False)
+		if isinstance(self.Protect, int):
+			t += self.Protect.to_bytes(4, byteorder = 'little', signed = False)
+		else:
+			t += self.Protect.value.to_bytes(4, byteorder = 'little', signed = False)
+		if isinstance(self.Type, int):
+			t += self.Type.to_bytes(4, byteorder = 'little', signed = False)
+		else:
+			t += self.Type.value.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.__alignment2.to_bytes(4, byteorder = 'little', signed = False)
 		return t
 	

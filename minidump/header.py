@@ -4,7 +4,7 @@ from minidump.exceptions import MinidumpHeaderFlagsException, MinidumpHeaderSign
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
 class MinidumpHeader:
 	def __init__(self):
-		self.Signature = 'PMDM'
+		self.Signature = 'MDMP'
 		self.Version = None
 		self.ImplementationVersion = None
 		self.NumberOfStreams = None
@@ -13,12 +13,6 @@ class MinidumpHeader:
 		self.Reserved = 0
 		self.TimeDateStamp = 0
 		self.Flags = None
-
-	def to_buffer(self, buffer):
-		self.StreamDirectoryRva = buffer.tell() + 16 # stream directory starts right after the end of the header
-		buffer.write(self.to_bytes())
-		# no need to seek here, the directories will be serialized by the file object
-
 
 	def to_bytes(self):
 		t = self.Signature.encode('ascii')

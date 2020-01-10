@@ -28,7 +28,11 @@ class MinidumpModule:
 		mm.size = mod.SizeOfImage
 		mm.checksum = mod.CheckSum
 		mm.timestamp = mod.TimeDateStamp
-		mm.name = MINIDUMP_STRING.get_from_rva(mod.ModuleNameRva, buff)
+		try:
+			mm.name = MINIDUMP_STRING.get_from_rva(mod.ModuleNameRva, buff)
+		except:
+			print('high: %s' % hex(mod.ModuleNameRva))
+			raise
 		mm.versioninfo = mod.VersionInfo
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
@@ -141,40 +145,36 @@ class MINIDUMP_MODULE:
 
 	def to_buffer(self, buffer):
 		#beware: MINIDUMP_LOCATION_DESCRIPTOR is used here regardless that sometimes data might be stored above 4GB. FIXME
+		pos1 = buffer.tell()
 		buffer.write(self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False))
 		buffer.write(self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False))
 		buffer.write(self.CheckSum.to_bytes(4, byteorder = 'little', signed = False))
 		buffer.write(self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False))
-		rva_modname = buffer.tell() + 32 + VS_FIXEDFILEINFO.get_size()
-		data_modname = MINIDUMP_STRING(self.ModuleName).to_bytes()
-		buffer.write(rva_modname.to_bytes(4, byteorder = 'little', signed = False))		
-		buffer.write(self.VersionInfo.to_bytes())
-		data_cvrecord = b''
-		if self.CvRecord is not None:
-			data_cvrecord = self.CvRecord.to_bytes()
-			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(len(data_cvrecord), 24 + buffer.tell() + len(data_modname)))
-		else:
-			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(0, 0).to_bytes())
+		buffer.write_rva(MINIDUMP_STRING(self.ModuleName).to_bytes())
 		
-		data_miscrecord = b''
-		if self.MiscRecord is not None:
-			data_miscrecord = self.MiscRecord.to_bytes()
-			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(len(data_miscrecord), 16 + buffer.tell() + len(data_modname) + len(data_cvrecord)))
+		if self.VersionInfo is not None:
+			buffer.write(self.VersionInfo.to_bytes())
 		else:
-			buffer.write(MINIDUMP_LOCATION_DESCRIPTOR(0, 0).to_bytes())
+			buffer.write(b'\x00' * VS_FIXEDFILEINFO.get_size())
+		if self.CvRecord is not None:
+			buffer.write_ld(self.VersionInfo.to_bytes())
+		else:
+			buffer.write_ld(b'')
+		
+		if self.MiscRecord is not None:
+			buffer.write_ld(self.MiscRecord.to_bytes())
+		else:
+			buffer.write_ld(b'')
 		buffer.write(self.Reserved0.to_bytes(8, byteorder = 'little', signed = False))
 		buffer.write(self.Reserved1.to_bytes(8, byteorder = 'little', signed = False))
-		
-		#RVAs
-		buffer.write(data_modname)
-		if self.CvRecord is not None:
-			buffer.write(data_cvrecord)
-		if self.MiscRecord is not None:
-			buffer.write(data_miscrecord)
-
 
 	@staticmethod
 	def parse(buff):
+		p1 = buff.tell()
+		#print('MINIDUMP_MODULE')
+		#print(hex(p1))
+		#input(hexdump(buff.read(6*8+4*4)))
+		buff.seek(p1)
 		mm = MINIDUMP_MODULE()
 		mm.BaseOfImage = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mm.SizeOfImage = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -186,6 +186,7 @@ class MINIDUMP_MODULE:
 		mm.MiscRecord = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		mm.Reserved0 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mm.Reserved1 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
+		#print('RVA: %s' % hex(mm.ModuleNameRva))
 		return mm
 
 	def __str__(self):
@@ -203,7 +204,7 @@ class MINIDUMP_MODULE_LIST:
 	def to_buffer(self, buffer):
 		buffer.write(len(self.Modules).to_bytes(4, byteorder = 'little', signed = False))
 		for module in self.Modules:
-			t += module.to_buffer(buffer)
+			module.to_buffer(buffer)
 	
 	@staticmethod
 	def parse(buff):
@@ -222,6 +223,8 @@ class MinidumpModuleList:
 	def parse(dir, buff):
 		t = MinidumpModuleList()
 		buff.seek(dir.Location.Rva)
+		input('ds %s' % dir.Location.DataSize)
+		input('rva %s' % hex(dir.Location.Rva))
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 		mtl = MINIDUMP_MODULE_LIST.parse(chunk)
 		for mod in mtl.Modules:
