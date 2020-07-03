@@ -132,7 +132,8 @@ class MinidumpBufferedReader:
 
 		t = self.current_position + size
 		if not self.current_segment.inrange(t):
-			raise Exception('Would read over segment boundaries!')
+			return self.current_segment.data[self.current_position:]
+			#raise Exception('Would read over segment boundaries!')
 
 		old_new_pos = self.current_position
 		self.current_position = t
