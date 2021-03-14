@@ -192,6 +192,32 @@ class ExceptionList:
 			t.exception_records.append(mes)
 			
 		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = ExceptionList()
+	
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+
+		# Unfortunately, we don't have a certain way to figure out how many exception records
+		# there is in the stream, so we have to fallback on heuristics (EOF or bad data read)
+		#
+		# NB : 	some tool only read one exception record : https://github.com/GregTheDev/MinidumpExplorer/blob/a6dd974757c16142eefcfff7d99be10b14f87eaf/MinidumpExplorer/MinidumpExplorer/MainForm.cs#L257
+		#		but it's incorrect since we can have an exception chain (double fault, exception catched and re-raised, etc.)
+		while chunk.tell() < dir.Location.DataSize:
+			mes = MINIDUMP_EXCEPTION_STREAM.parse(chunk)
+
+			# a minidump exception stream is usally padded with zeroes
+			# so whenever we parse an exception record with the code EXCEPTION_NONE
+			# we can stop.
+			if mes.ExceptionRecord.ExceptionCode == ExceptionCode.EXCEPTION_NONE:
+				break
+
+			t.exception_records.append(mes)
+			
+		return t
 	
 	def to_table(self):
 		t = []

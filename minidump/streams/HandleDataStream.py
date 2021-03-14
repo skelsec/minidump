@@ -104,6 +104,18 @@ class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 		mhoi.SizeOfInfo = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhoi.info_bytes = buff.read(mhoi.SizeOfInfo)
 		return mhoi
+
+	@staticmethod
+	async def aparse(buff):
+		mhoi = MINIDUMP_HANDLE_OBJECT_INFORMATION()
+		t = await buff.read(4)
+		mhoi.NextInfoRva = int.from_bytes(t, byteorder = 'little', signed = False)
+		t = await buff.read(4)
+		mhoi.InfoType = int.from_bytes(t, byteorder = 'little', signed = False)
+		t = await buff.read(4)
+		mhoi.SizeOfInfo = int.from_bytes(t, byteorder = 'little', signed = False)
+		mhoi.info_bytes = await buff.read(mhoi.SizeOfInfo)
+		return mhoi
 		
 class MinidumpHandleObjectInformation:
 	def __init__(self):
@@ -113,7 +125,7 @@ class MinidumpHandleObjectInformation:
 		self.info_bytes = None
 	
 	@staticmethod
-	def parse(mhoi, buff):
+	def parse(mhoi):
 		t = MinidumpHandleObjectInformation()
 		t.InfoType = mhoi.InfoType
 		t.SizeOfInfo = mhoi.SizeOfInfo
@@ -152,13 +164,39 @@ class MinidumpHandleDescriptor:
 			if t.ObjectInfoRva is not None and t.ObjectInfoRva != 0:
 				MinidumpHandleDescriptor.walk_objectinfo(mhd, t.ObjectInfoRva, buff)
 		return mhd
+
+	@staticmethod
+	async def aparse(t, buff):
+		mhd = MinidumpHandleDescriptor()
+		mhd.Handle = t.Handle
+		if t.TypeNameRva != 0:
+			mhd.TypeName = await MINIDUMP_STRING.aget_from_rva(t.TypeNameRva, buff)
+		if t.ObjectNameRva != 0:
+			mhd.ObjectName = await MINIDUMP_STRING.aget_from_rva(t.ObjectNameRva, buff)
+		mhd.Attributes = t.Attributes
+		mhd.GrantedAccess = t.GrantedAccess
+		mhd.HandleCount = t.HandleCount
+		mhd.PointerCount = t.PointerCount
+		if isinstance(t, MINIDUMP_HANDLE_DESCRIPTOR_2):
+			if t.ObjectInfoRva is not None and t.ObjectInfoRva != 0:
+				await MinidumpHandleDescriptor.awalk_objectinfo(mhd, t.ObjectInfoRva, buff)
+		return mhd
 	
 	@staticmethod
 	def walk_objectinfo(mhd, start, buff):
 		while start is not None and start != 0:
 			buff.seek(start)
 			mhoi = MINIDUMP_HANDLE_OBJECT_INFORMATION.parse(buff)
-			t = MinidumpHandleObjectInformation.parse(mhoi, buff)
+			t = MinidumpHandleObjectInformation.parse(mhoi)
+			mhd.ObjectInfos.append(t)
+			start = t.NextInfo
+
+	@staticmethod
+	async def awalk_objectinfo(mhd, start, buff):
+		while start is not None and start != 0:
+			await buff.seek(start)
+			mhoi = await MINIDUMP_HANDLE_OBJECT_INFORMATION.aparse(buff)
+			t = MinidumpHandleObjectInformation.parse(mhoi)
 			mhd.ObjectInfos.append(t)
 			start = t.NextInfo
 		
@@ -194,6 +232,24 @@ class MinidumpHandleDataStream:
 			else:
 				mhd = MINIDUMP_HANDLE_DESCRIPTOR_2.parse(chunk)
 				t.handles.append(MinidumpHandleDescriptor.parse(mhd, buff))
+		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpHandleDataStream()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		t.header = MINIDUMP_HANDLE_DATA_STREAM.parse(chunk)
+		for _ in range(t.header.NumberOfDescriptors):
+			if t.header.SizeOfDescriptor == MINIDUMP_HANDLE_DESCRIPTOR.size:
+				mhd = MINIDUMP_HANDLE_DESCRIPTOR.parse(chunk)
+				r = await MinidumpHandleDescriptor.aparse(mhd, buff)
+				t.handles.append(r)
+			else:
+				mhd = MINIDUMP_HANDLE_DESCRIPTOR_2.parse(chunk)
+				r = await MinidumpHandleDescriptor.aparse(mhd, buff)
+				t.handles.append(r)
 		return t
 		
 	def __str__(self):

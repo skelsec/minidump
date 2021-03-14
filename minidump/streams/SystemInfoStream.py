@@ -250,6 +250,36 @@ class MinidumpSystemInfo:
 			t.OperatingSystem = None
 		return t
 
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpSystemInfo()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		si = MINIDUMP_SYSTEM_INFO.parse(chunk)
+		t.ProcessorArchitecture = si.ProcessorArchitecture
+		t.ProcessorLevel = si.ProcessorLevel
+		t.ProcessorRevision = si.ProcessorRevision
+		t.NumberOfProcessors = si.NumberOfProcessors
+		t.ProductType = si.ProductType
+		t.MajorVersion = si.MajorVersion
+		t.MinorVersion = si.MinorVersion
+		t.BuildNumber = si.BuildNumber
+		t.PlatformId = si.PlatformId
+		t.CSDVersion = await MINIDUMP_STRING.aget_from_rva(si.CSDVersionRva, buff)
+		t.SuiteMask = si.SuiteMask
+		t.VendorId = si.VendorId
+		t.VersionInformation = si.VersionInformation
+		t.FeatureInformation = si.FeatureInformation
+		t.AMDExtendedCpuFeatures = si.AMDExtendedCpuFeatures
+		t.ProcessorFeatures = si.ProcessorFeatures
+		try:
+			t.guess_os()
+		except Exception as e:
+			logging.log(1, 'Failed to guess OS! MajorVersion: %s MinorVersion %s BuildNumber %s ProductType: %s' % (t.MajorVersion, t.MinorVersion, t.BuildNumber, t.ProductType ))
+			t.OperatingSystem = None
+		return t
+
 
 	def __str__(self):
 		t = '== System Info ==\n'

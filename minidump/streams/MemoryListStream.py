@@ -86,6 +86,17 @@ class MinidumpMemoryList:
 		for mod in mtl.MemoryRanges:
 			t.memory_segments.append(MinidumpMemorySegment.parse_mini(mod, buff))
 		return t
+	
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpMemoryList()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		mtl = MINIDUMP_MEMORY_LIST.parse(chunk)
+		for mod in mtl.MemoryRanges:
+			t.memory_segments.append(MinidumpMemorySegment.parse_mini(mod, buff))
+		return t
 		
 	def __str__(self):
 		t  = '== MinidumpMemoryList ==\n'

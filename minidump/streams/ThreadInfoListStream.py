@@ -160,9 +160,22 @@ class MinidumpThreadInfoList:
 		data = buff.read(dir.Location.DataSize)
 		chunk = io.BytesIO(data)
 		t.header = MINIDUMP_THREAD_INFO_LIST.parse(chunk)
-		for i in range(t.header.NumberOfEntries):
+		for _ in range(t.header.NumberOfEntries):
 			mi = MINIDUMP_THREAD_INFO.parse(chunk)
 			t.infos.append(MinidumpThreadInfo.parse(mi, buff))
+		
+		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpThreadInfoList()
+		await buff.seek(dir.Location.Rva)
+		data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(data)
+		t.header = MINIDUMP_THREAD_INFO_LIST.parse(chunk)
+		for _ in range(t.header.NumberOfEntries):
+			mi = MINIDUMP_THREAD_INFO.parse(chunk)
+			t.infos.append(MinidumpThreadInfo.parse(mi, None))
 		
 		return t
 		

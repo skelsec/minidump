@@ -84,6 +84,16 @@ class MinidumpThreadExList:
 		mtl = MINIDUMP_THREAD_EX_LIST.parse(chunk)
 		t.threads = mtl.Threads
 		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpThreadExList()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		mtl = MINIDUMP_THREAD_EX_LIST.parse(chunk)
+		t.threads = mtl.Threads
+		return t
 	
 	def to_table(self):
 		t = []
