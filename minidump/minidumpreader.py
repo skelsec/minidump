@@ -216,8 +216,8 @@ class MinidumpBufferedReader:
 			self.move(pos)
 			return self.read_uint()
 
-	def find_in_module(self, module_name, pattern):
-		t = self.reader.search_module(module_name, pattern)
+	def find_in_module(self, module_name, pattern, find_first = False, reverse_order = False):
+		t = self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order)
 		return t
 
 
@@ -261,21 +261,25 @@ class MinidumpFileReader:
 				return mod
 		return None
 
-	def search_module(self, module_name, pattern):
+	def search_module(self, module_name, pattern, find_first = False, reverse_order = False):
 		mod = self.get_module_by_name(module_name)
 		if mod is None:
 			raise Exception('Could not find module! %s' % module_name)
-		t = []
+		
+		needles = []
 		for ms in self.memory_segments:
 			if mod.baseaddress <= ms.start_virtual_address < mod.endaddress:
-				t+= ms.search(pattern, self.file_handle)
+				needles+= ms.search(pattern, self.file_handle, find_first = find_first)
+				if len(needles) > 0 and find_first is True:
+					return needles
 
-		return t
 
-	def search(self, pattern):
+		return needles
+
+	def search(self, pattern, find_first = False):
 		t = []
 		for ms in self.memory_segments:
-			t+= ms.search(pattern, self.file_handle)
+			t+= ms.search(pattern, self.file_handle, find_first = find_first)
 
 		return t
 

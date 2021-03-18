@@ -226,8 +226,8 @@ class AMinidumpBufferedReader:
 			await self.move(pos)
 			return await self.read_uint()
 
-	async def find_in_module(self, module_name, pattern):
-		t = await self.reader.search_module(module_name, pattern)
+	async def find_in_module(self, module_name, pattern, find_first = False, reverse_order = False):
+		t = await self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order)
 		return t
 
 
@@ -271,18 +271,20 @@ class AMinidumpFileReader:
 				return mod
 		return None
 
-	async def search_module(self, module_name, pattern):
+	async def search_module(self, module_name, pattern, find_first = False, reverse_order = False):
 		mod = self.get_module_by_name(module_name)
 		if mod is None:
 			raise Exception('Could not find module! %s' % module_name)
-		t = []
+		needles = []
 		for ms in self.memory_segments:
 			if mod.baseaddress <= ms.start_virtual_address < mod.endaddress:
-				t += await ms.asearch(pattern, self.file_handle)
+				needles += await ms.asearch(pattern, self.file_handle, find_first = find_first)
+				if len(needles) > 0 and find_first is True:
+					return needles
 
-		return t
+		return needles
 
-	async def search(self, pattern):
+	async def search(self, pattern, find_first = False):
 		t = []
 		for ms in self.memory_segments:
 			t += await ms.asearch(pattern, self.file_handle)

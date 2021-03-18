@@ -155,7 +155,7 @@ class MinidumpMemorySegment:
 		await file_handler.seek(pos, 0)
 		return data
 		
-	def search(self, pattern, file_handler):
+	def search(self, pattern, file_handler, find_first = False):
 		if len(pattern) > self.size:
 			return []
 		pos = file_handler.tell()
@@ -171,10 +171,12 @@ class MinidumpMemorySegment:
 			fl.append(marker + offset + self.start_virtual_address)
 			data = data[marker+1:]
 			offset = marker + 1
+			if find_first is True:
+				return fl
 				
 		return fl
 
-	async def asearch(self, pattern, file_handler):
+	async def asearch(self, pattern, file_handler, find_first = False):
 		if len(pattern) > self.size:
 			return []
 		pos = file_handler.tell()
@@ -190,6 +192,8 @@ class MinidumpMemorySegment:
 			fl.append(marker + offset + self.start_virtual_address)
 			data = data[marker+1:]
 			offset = marker + 1
+			if find_first is True:
+				return fl
 				
 		return fl
 	
