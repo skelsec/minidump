@@ -30,26 +30,6 @@ class MinidumpBufferedMemorySegment:
 		self.chunksize = chunksize
 		self.chunks = []
 
-		self.misses = 0
-		self.min_chunksize = 99999999
-		self.max_chunksize = -1
-		self.total_read = 0
-
-		#file_handle.seek(memory_segment.start_file_address)
-		#print('MS size: %s' % memory_segment.size)
-		#self.data = file_handle.read(memory_segment.size)
-
-	def __str__(self):
-		return '[MS] MISS: %s MIN: %s MAX:%s TOTAL_READ: %s TOTAL_SIZE: %s R/S %s' % (
-			self.misses, 
-			self.min_chunksize, 
-			self.max_chunksize, 
-			self.total_read, 
-			(self.end_address - self.start_address),
-			100*( self.total_read / (self.end_address - self.start_address))
-		
-		)
-
 	def inrange(self, position):
 		return self.start_address <= position <= self.end_address
 
@@ -58,55 +38,36 @@ class MinidumpBufferedMemorySegment:
 			return None
 		return self.end_address - position
 
+	def find(self, file_handle, pattern, startpos):
+		data = self.read(file_handle, 0, -1)
+		return data.find(pattern, startpos)
+
 	def read(self, file_handle, start, end):
-		#print('MS read! START: %s END: %s ' % (start, end))
 		if end is None:
 			file_handle.seek(self.start_file_address + start)
 			return file_handle.read(self.end_address - (self.start_file_address + start))
 		
 		for chunk in self.chunks:
 			if chunk.inrange(start, end):
-				#print('MS read IN CACHE! ')
-				#print('[CACHE] chunk.start %s' % chunk.start)
-				#print('[CACHE] start %s' % start)
-				#print('[CACHE] end %s' % end)
-				#print('[CACHE] start - chunk.start %s' % (start - chunk.start))
-				#print('[CACHE] end - vs.start %s' % (end - chunk.start))
-				##input(chunk.data[start - chunk.start: end - chunk.start])
-
 				return chunk.data[start - chunk.start: end - chunk.start]
 		
-		#print('MS read CACHE MISS')
-		self.misses += 1
-		if self.total_size <= 5*self.chunksize:
+		if self.total_size <= 2*self.chunksize:
 			chunksize = self.total_size
 			vs = VirtualSegment(0, chunksize, self.start_file_address)
 			file_handle.seek(self.start_file_address)
-			#print('MS read CACHE read: %s' % chunksize)
 			vs.data = file_handle.read(chunksize)
-			self.total_read += len(vs.data)
 			self.chunks.append(vs)
 			return vs.data[start - vs.start: end - vs.start]
 
 		chunksize = max((end-start), self.chunksize)
 		if start + chunksize > self.end_address:
 			chunksize = self.end_address - start
-		#print(chunksize)
-		self.min_chunksize = min(self.min_chunksize, chunksize)
-		self.max_chunksize = max(self.max_chunksize, chunksize)
+		
 		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
 		file_handle.seek(vs.start_file_address)
-		#print('MS read CACHE read: %s' % chunksize)
 		vs.data = file_handle.read(chunksize)
-		self.total_read += len(vs.data)
 		self.chunks.append(vs)
 		
-		#print('vs.start %s' % vs.start)
-		#print('start %s' % start)
-		#print('end %s' % end)
-		#print('start - vs.start %s' % (start - vs.start))
-		#print('end - vs.start %s' % (end - vs.start))
-		#input(vs.data[start - vs.start: end - vs.start])
 		return vs.data[start - vs.start: end - vs.start]
 
 
@@ -119,19 +80,6 @@ class MinidumpBufferedReader:
 
 		self.current_segment = None
 		self.current_position = None
-
-	def __str__(self):
-		t = ''
-		total = 0
-		total_size = 0 
-		for ms in self.memory_segments:
-			t += str(ms) + '\r\n'
-			total += ms.total_read
-			total_size += (ms.end_address - ms.start_address)
-		t += 'total_read: %s\r\n' % total
-		t += 'total_size: %s\r\n' % total_size
-		t += 'total_rs: %s\r\n' % (total/total_size)
-		return t
 
 	def _select_segment(self, requested_position):
 		"""
@@ -265,8 +213,7 @@ class MinidumpBufferedReader:
 		"""
 		Searches for a pattern in the current memory segment
 		"""
-		input('FIND!!!!!')
-		pos = self.current_segment.data.find(pattern)
+		pos = self.current_segment.find(self.reader.file_handle, pattern)
 		if pos == -1:
 			return -1
 		return pos + self.current_position
@@ -278,8 +225,7 @@ class MinidumpBufferedReader:
 		pos = []
 		last_found = -1
 		while True:
-			input('FIND ALL!!!!!')
-			last_found = self.current_segment.data.find(pattern, last_found + 1)
+			last_found = self.current_segment.find(self.reader.file_handle, pattern, last_found + 1)
 			if last_found == -1:
 				break
 			pos.append(last_found + self.current_segment.start_address)
@@ -320,7 +266,7 @@ class MinidumpBufferedReader:
 			return self.read_uint()
 
 	def find_in_module(self, module_name, pattern, find_first = False, reverse_order = False):
-		t = self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order)
+		t = self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order, chunksize = self.segment_chunk_size)
 		return t
 
 
@@ -364,7 +310,7 @@ class MinidumpFileReader:
 				return mod
 		return None
 
-	def search_module(self, module_name, pattern, find_first = False, reverse_order = False):
+	def search_module(self, module_name, pattern, find_first = False, reverse_order = False, chunksize = 10*1024):
 		mod = self.get_module_by_name(module_name)
 		if mod is None:
 			raise Exception('Could not find module! %s' % module_name)
@@ -372,17 +318,17 @@ class MinidumpFileReader:
 		needles = []
 		for ms in self.memory_segments:
 			if mod.baseaddress <= ms.start_virtual_address < mod.endaddress:
-				needles+= ms.search(pattern, self.file_handle, find_first = find_first)
+				needles+= ms.search(pattern, self.file_handle, find_first = find_first, chunksize = chunksize)
 				if len(needles) > 0 and find_first is True:
 					return needles
 
 
 		return needles
 
-	def search(self, pattern, find_first = False):
+	def search(self, pattern, find_first = False, chunksize = 10*1024):
 		t = []
 		for ms in self.memory_segments:
-			t+= ms.search(pattern, self.file_handle, find_first = find_first)
+			t+= ms.search(pattern, self.file_handle, find_first = find_first, chunksize = chunksize)
 
 		return t
 

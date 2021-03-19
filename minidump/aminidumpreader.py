@@ -8,17 +8,26 @@ import ntpath
 from .common_structs import *
 from .streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
-class AMinidumpBufferedMemorySegment:
-	def __init__(self):
-		self.start_address = None
-		self.end_address = None
-		self.data = None
 
-	async def load(self, memory_segment, file_handle):
+class VirtualSegment:
+	def __init__(self, start, end, start_file_address):
+		self.start = start
+		self.end = end
+		self.start_file_address = start_file_address
+
+		self.data = None
+	
+	def inrange(self, start, end):
+		return self.start <= start and end<= self.end
+
+class AMinidumpBufferedMemorySegment:
+	def __init__(self, memory_segment, chunksize = 10*1024):
 		self.start_address = memory_segment.start_virtual_address
 		self.end_address = memory_segment.end_virtual_address
-		await file_handle.seek(memory_segment.start_file_address)
-		self.data = await file_handle.read(memory_segment.size)
+		self.total_size = memory_segment.end_virtual_address - memory_segment.start_virtual_address
+		self.start_file_address = memory_segment.start_file_address
+		self.chunksize = chunksize
+		self.chunks = []
 
 	def inrange(self, position):
 		return self.start_address <= position <= self.end_address
@@ -28,10 +37,43 @@ class AMinidumpBufferedMemorySegment:
 			return None
 		return self.end_address - position
 
+	async def find(self, file_handle, pattern, startpos):
+		data = await self.read(file_handle, 0, -1)
+		return data.find(pattern, startpos)
+
+	async def read(self, file_handle, start, end):
+		if end is None:
+			await file_handle.seek(self.start_file_address + start)
+			return await file_handle.read(self.end_address - (self.start_file_address + start))
+		
+		for chunk in self.chunks:
+			if chunk.inrange(start, end):
+				return chunk.data[start - chunk.start: end - chunk.start]
+		
+		if self.total_size <= 2*self.chunksize:
+			chunksize = self.total_size
+			vs = VirtualSegment(0, chunksize, self.start_file_address)
+			await file_handle.seek(self.start_file_address)
+			vs.data = await file_handle.read(chunksize)
+			self.chunks.append(vs)
+			return vs.data[start - vs.start: end - vs.start]
+
+		chunksize = max((end-start), self.chunksize)
+		if start + chunksize > self.end_address:
+			chunksize = self.end_address - start
+		
+		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
+		await file_handle.seek(vs.start_file_address)
+		vs.data = await file_handle.read(chunksize)
+		self.chunks.append(vs)
+		
+		return vs.data[start - vs.start: end - vs.start]
+
 class AMinidumpBufferedReader:
-	def __init__(self, reader):
+	def __init__(self, reader, segment_chunk_size = 10*1024):
 		self.reader = reader
 		self.memory_segments = []
+		self.segment_chunk_size = segment_chunk_size
 
 		self.current_segment = None
 		self.current_position = None
@@ -50,8 +92,7 @@ class AMinidumpBufferedReader:
 		# not in cache, check if it's present in memory space. if yes then create a new buffered memeory object, and copy data
 		for memory_segment in self.reader.memory_segments:
 			if memory_segment.inrange(requested_position):
-				newsegment = AMinidumpBufferedMemorySegment()
-				await newsegment.load(memory_segment, self.reader.file_handle)
+				newsegment = AMinidumpBufferedMemorySegment(memory_segment, chunksize=self.segment_chunk_size)
 				self.memory_segments.append(newsegment)
 				self.current_segment = newsegment
 				self.current_position = requested_position
@@ -118,7 +159,7 @@ class AMinidumpBufferedReader:
 		t = self.current_position + length
 		if not self.current_segment.inrange(t):
 			raise Exception('Would read over segment boundaries!')
-		return self.current_segment.data[self.current_position - self.current_segment.start_address :t - self.current_segment.start_address]
+		return await self.current_segment.read(self.reader.file_handle, self.current_position - self.current_segment.start_address , t - self.current_segment.start_address)
 
 	async def read(self, size = -1):
 		"""
@@ -133,7 +174,7 @@ class AMinidumpBufferedReader:
 
 			old_new_pos = self.current_position
 			self.current_position = self.current_segment.end_address
-			return self.current_segment.data[old_new_pos - self.current_segment.start_address:]
+			return await self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, None)
 
 		t = self.current_position + size
 		if not self.current_segment.inrange(t):
@@ -141,7 +182,7 @@ class AMinidumpBufferedReader:
 
 		old_new_pos = self.current_position
 		self.current_position = t
-		return self.current_segment.data[old_new_pos - self.current_segment.start_address :t - self.current_segment.start_address]
+		return await self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, t - self.current_segment.start_address)
 
 	async def read_int(self):
 		"""
@@ -173,7 +214,7 @@ class AMinidumpBufferedReader:
 		"""
 		Searches for a pattern in the current memory segment
 		"""
-		pos = self.current_segment.data.find(pattern)
+		pos = await self.current_segment.find(self.reader.file_handle, pattern)
 		if pos == -1:
 			return -1
 		return pos + self.current_position
@@ -185,7 +226,7 @@ class AMinidumpBufferedReader:
 		pos = []
 		last_found = -1
 		while True:
-			last_found = self.current_segment.data.find(pattern, last_found + 1)
+			last_found = await self.current_segment.find(self.reader.file_handle, pattern, last_found + 1)
 			if last_found == -1:
 				break
 			pos.append(last_found + self.current_segment.start_address)
@@ -227,7 +268,7 @@ class AMinidumpBufferedReader:
 			return await self.read_uint()
 
 	async def find_in_module(self, module_name, pattern, find_first = False, reverse_order = False):
-		t = await self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order)
+		t = await self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order,chunksize = self.segment_chunk_size)
 		return t
 
 
@@ -262,8 +303,8 @@ class AMinidumpFileReader:
 		else:
 			raise Exception('Unknown processor architecture %s! Please fix and submit PR!' % self.sysinfo.ProcessorArchitecture)
 
-	def get_buffered_reader(self):
-		return AMinidumpBufferedReader(self)
+	def get_buffered_reader(self, segment_chunk_size = 10*1024):
+		return AMinidumpBufferedReader(self, segment_chunk_size = segment_chunk_size)
 
 	def get_module_by_name(self, module_name):
 		for mod in self.modules:
@@ -271,23 +312,23 @@ class AMinidumpFileReader:
 				return mod
 		return None
 
-	async def search_module(self, module_name, pattern, find_first = False, reverse_order = False):
+	async def search_module(self, module_name, pattern, find_first = False, reverse_order = False, chunksize = 10*1024):
 		mod = self.get_module_by_name(module_name)
 		if mod is None:
 			raise Exception('Could not find module! %s' % module_name)
 		needles = []
 		for ms in self.memory_segments:
 			if mod.baseaddress <= ms.start_virtual_address < mod.endaddress:
-				needles += await ms.asearch(pattern, self.file_handle, find_first = find_first)
+				needles += await ms.asearch(pattern, self.file_handle, find_first = find_first, chunksize = chunksize)
 				if len(needles) > 0 and find_first is True:
 					return needles
 
 		return needles
 
-	async def search(self, pattern, find_first = False):
+	async def search(self, pattern, find_first = False, chunksize = 10*1024):
 		t = []
 		for ms in self.memory_segments:
-			t += await ms.asearch(pattern, self.file_handle, find_first = find_first)
+			t += await ms.asearch(pattern, self.file_handle, find_first = find_first, chunksize = chunksize)
 
 		return t
 
