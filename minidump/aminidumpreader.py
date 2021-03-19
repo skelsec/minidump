@@ -287,7 +287,7 @@ class AMinidumpFileReader:
 	async def search(self, pattern, find_first = False):
 		t = []
 		for ms in self.memory_segments:
-			t += await ms.asearch(pattern, self.file_handle)
+			t += await ms.asearch(pattern, self.file_handle, find_first = find_first)
 
 		return t
 

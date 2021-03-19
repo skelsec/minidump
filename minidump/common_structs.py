@@ -155,46 +155,88 @@ class MinidumpMemorySegment:
 		await file_handler.seek(pos, 0)
 		return data
 		
-	def search(self, pattern, file_handler, find_first = False):
+	def search(self, pattern, file_handler, find_first = False, chunksize = 50*1024):
 		if len(pattern) > self.size:
 			return []
 		pos = file_handler.tell()
 		file_handler.seek(self.start_file_address, 0)
-		data = file_handler.read(self.size)
-		file_handler.seek(pos, 0)
 		fl = []
-		offset = 0
-		while len(data) > len(pattern):
-			marker = data.find(pattern)
-			if marker == -1:
-				return fl
-			fl.append(marker + offset + self.start_virtual_address)
-			data = data[marker+1:]
-			offset = marker + 1
-			if find_first is True:
-				return fl
-				
+		if find_first is True:
+			chunksize = min(chunksize, self.size)
+			data = b''
+			i = 0
+			while len(data) < self.size:
+				i += 1
+				if chunksize > (self.size - len(data)):
+					chunksize = (self.size - len(data))
+				data += file_handler.read(chunksize)
+				marker = data.find(pattern)
+				if marker != -1:
+					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
+					file_handler.seek(pos, 0)
+					return [self.start_virtual_address + marker]
+			
+			
+			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
+			
+		else:
+			data = file_handler.read(self.size)
+			file_handler.seek(pos, 0)
+			
+			offset = 0
+			while len(data) > len(pattern):
+				marker = data.find(pattern)
+				if marker == -1:
+					return fl
+				fl.append(marker + offset + self.start_virtual_address)
+				data = data[marker+1:]
+				offset = marker + 1
+				if find_first is True:
+					return fl
+		
+		file_handler.seek(pos, 0)
 		return fl
 
-	async def asearch(self, pattern, file_handler, find_first = False):
+	async def asearch(self, pattern, file_handler, find_first = False, chunksize = 50*1024):
 		if len(pattern) > self.size:
 			return []
 		pos = file_handler.tell()
 		await file_handler.seek(self.start_file_address, 0)
-		data = await file_handler.read(self.size)
-		await file_handler.seek(pos, 0)
 		fl = []
-		offset = 0
-		while len(data) > len(pattern):
-			marker = data.find(pattern)
-			if marker == -1:
-				return fl
-			fl.append(marker + offset + self.start_virtual_address)
-			data = data[marker+1:]
-			offset = marker + 1
-			if find_first is True:
-				return fl
-				
+		
+		if find_first is True:
+			chunksize = min(chunksize, self.size)
+			data = b''
+			i = 0
+			while len(data) < self.size:
+				i += 1
+				if chunksize > (self.size - len(data)):
+					chunksize = (self.size - len(data))
+				data += await file_handler.read(chunksize)
+				marker = data.find(pattern)
+				if marker != -1:
+					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
+					await file_handler.seek(pos, 0)
+					return [self.start_virtual_address + marker]
+			
+			
+			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
+		
+		else:
+			offset = 0
+			data = await file_handler.read(self.size)
+			await file_handler.seek(pos, 0)
+			while len(data) > len(pattern):
+				marker = data.find(pattern)
+				if marker == -1:
+					return fl
+				fl.append(marker + offset + self.start_virtual_address)
+				data = data[marker+1:]
+				offset = marker + 1
+				if find_first is True:
+					return fl
+		
+		await file_handler.seek(pos, 0)
 		return fl
 	
 	

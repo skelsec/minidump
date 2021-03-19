@@ -8,13 +8,47 @@ import ntpath
 from .common_structs import *
 from .streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
+class VirtualSegment:
+	def __init__(self, start, end, start_file_address):
+		self.start = start
+		self.end = end
+		self.start_file_address = start_file_address
+
+		
+
+		self.data = None
+	
+	def inrange(self, start, end):
+		return self.start <= start and end<= self.end
+
 class MinidumpBufferedMemorySegment:
-	def __init__(self, memory_segment, file_handle):
+	def __init__(self, memory_segment, file_handle, chunksize = 10*1024):
 		self.start_address = memory_segment.start_virtual_address
 		self.end_address = memory_segment.end_virtual_address
+		self.total_size = memory_segment.end_virtual_address - memory_segment.start_virtual_address
+		self.start_file_address = memory_segment.start_file_address
+		self.chunksize = chunksize
+		self.chunks = []
 
-		file_handle.seek(memory_segment.start_file_address)
-		self.data = file_handle.read(memory_segment.size)
+		self.misses = 0
+		self.min_chunksize = 99999999
+		self.max_chunksize = -1
+		self.total_read = 0
+
+		#file_handle.seek(memory_segment.start_file_address)
+		#print('MS size: %s' % memory_segment.size)
+		#self.data = file_handle.read(memory_segment.size)
+
+	def __str__(self):
+		return '[MS] MISS: %s MIN: %s MAX:%s TOTAL_READ: %s TOTAL_SIZE: %s R/S %s' % (
+			self.misses, 
+			self.min_chunksize, 
+			self.max_chunksize, 
+			self.total_read, 
+			(self.end_address - self.start_address),
+			100*( self.total_read / (self.end_address - self.start_address))
+		
+		)
 
 	def inrange(self, position):
 		return self.start_address <= position <= self.end_address
@@ -24,13 +58,80 @@ class MinidumpBufferedMemorySegment:
 			return None
 		return self.end_address - position
 
+	def read(self, file_handle, start, end):
+		#print('MS read! START: %s END: %s ' % (start, end))
+		if end is None:
+			file_handle.seek(self.start_file_address + start)
+			return file_handle.read(self.end_address - (self.start_file_address + start))
+		
+		for chunk in self.chunks:
+			if chunk.inrange(start, end):
+				#print('MS read IN CACHE! ')
+				#print('[CACHE] chunk.start %s' % chunk.start)
+				#print('[CACHE] start %s' % start)
+				#print('[CACHE] end %s' % end)
+				#print('[CACHE] start - chunk.start %s' % (start - chunk.start))
+				#print('[CACHE] end - vs.start %s' % (end - chunk.start))
+				##input(chunk.data[start - chunk.start: end - chunk.start])
+
+				return chunk.data[start - chunk.start: end - chunk.start]
+		
+		#print('MS read CACHE MISS')
+		self.misses += 1
+		if self.total_size <= 5*self.chunksize:
+			chunksize = self.total_size
+			vs = VirtualSegment(0, chunksize, self.start_file_address)
+			file_handle.seek(self.start_file_address)
+			#print('MS read CACHE read: %s' % chunksize)
+			vs.data = file_handle.read(chunksize)
+			self.total_read += len(vs.data)
+			self.chunks.append(vs)
+			return vs.data[start - vs.start: end - vs.start]
+
+		chunksize = max((end-start), self.chunksize)
+		if start + chunksize > self.end_address:
+			chunksize = self.end_address - start
+		#print(chunksize)
+		self.min_chunksize = min(self.min_chunksize, chunksize)
+		self.max_chunksize = max(self.max_chunksize, chunksize)
+		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
+		file_handle.seek(vs.start_file_address)
+		#print('MS read CACHE read: %s' % chunksize)
+		vs.data = file_handle.read(chunksize)
+		self.total_read += len(vs.data)
+		self.chunks.append(vs)
+		
+		#print('vs.start %s' % vs.start)
+		#print('start %s' % start)
+		#print('end %s' % end)
+		#print('start - vs.start %s' % (start - vs.start))
+		#print('end - vs.start %s' % (end - vs.start))
+		#input(vs.data[start - vs.start: end - vs.start])
+		return vs.data[start - vs.start: end - vs.start]
+
+
+
 class MinidumpBufferedReader:
-	def __init__(self, reader):
+	def __init__(self, reader, segment_chunk_size = 10*1024):
 		self.reader = reader
+		self.segment_chunk_size = segment_chunk_size
 		self.memory_segments = []
 
 		self.current_segment = None
 		self.current_position = None
+
+	def __str__(self):
+		t = ''
+		total = 0
+		total_size = 0 
+		for ms in self.memory_segments:
+			t += str(ms) + '\r\n'
+			total += ms.total_read
+			total_size += (ms.end_address - ms.start_address)
+		t += 'total_read: %s\r\n' % total
+		t += 'total_size: %s\r\n' % total_size
+		t += 'total_rs: %s\r\n' % (total/total_size)
+		return t
 
 	def _select_segment(self, requested_position):
 		"""
@@ -46,7 +147,7 @@ class MinidumpBufferedReader:
 		# not in cache, check if it's present in memory space. if yes then create a new buffered memeory object, and copy data
 		for memory_segment in self.reader.memory_segments:
 			if memory_segment.inrange(requested_position):
-				newsegment = MinidumpBufferedMemorySegment(memory_segment, self.reader.file_handle)
+				newsegment = MinidumpBufferedMemorySegment(memory_segment, self.reader.file_handle, chunksize=self.segment_chunk_size)
 				self.memory_segments.append(newsegment)
 				self.current_segment = newsegment
 				self.current_position = requested_position
@@ -113,7 +214,7 @@ class MinidumpBufferedReader:
 		t = self.current_position + length
 		if not self.current_segment.inrange(t):
 			raise Exception('Would read over segment boundaries!')
-		return self.current_segment.data[self.current_position - self.current_segment.start_address :t - self.current_segment.start_address]
+		return self.current_segment.read(self.reader.file_handle, self.current_position - self.current_segment.start_address , t - self.current_segment.start_address)
 
 	def read(self, size = -1):
 		"""
@@ -128,7 +229,7 @@ class MinidumpBufferedReader:
 
 			old_new_pos = self.current_position
 			self.current_position = self.current_segment.end_address
-			return self.current_segment.data[old_new_pos - self.current_segment.start_address:]
+			return self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, None)
 
 		t = self.current_position + size
 		if not self.current_segment.inrange(t):
@@ -136,7 +237,7 @@ class MinidumpBufferedReader:
 
 		old_new_pos = self.current_position
 		self.current_position = t
-		return self.current_segment.data[old_new_pos - self.current_segment.start_address :t - self.current_segment.start_address]
+		return self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, t - self.current_segment.start_address)
 
 	def read_int(self):
 		"""
@@ -164,6 +265,7 @@ class MinidumpBufferedReader:
 		"""
 		Searches for a pattern in the current memory segment
 		"""
+		input('FIND!!!!!')
 		pos = self.current_segment.data.find(pattern)
 		if pos == -1:
 			return -1
@@ -176,6 +278,7 @@ class MinidumpBufferedReader:
 		pos = []
 		last_found = -1
 		while True:
+			input('FIND ALL!!!!!')
 			last_found = self.current_segment.data.find(pattern, last_found + 1)
 			if last_found == -1:
 				break
@@ -252,8 +355,8 @@ class MinidumpFileReader:
 		else:
 			raise Exception('Unknown processor architecture %s! Please fix and submit PR!' % self.sysinfo.ProcessorArchitecture)
 
-	def get_buffered_reader(self):
-		return MinidumpBufferedReader(self)
+	def get_buffered_reader(self, segment_chunk_size = 10*1024):
+		return MinidumpBufferedReader(self, segment_chunk_size = segment_chunk_size)
 
 	def get_module_by_name(self, module_name):
 		for mod in self.modules:
