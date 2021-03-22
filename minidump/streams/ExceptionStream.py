@@ -51,6 +51,7 @@ class MINIDUMP_EXCEPTION_STREAM:
 		
 class ExceptionCode(enum.Enum):
 	# Not a real exception code, it's just a placeholder to prevent the parser from raising an error
+	EXCEPTION_UNKNOWN               = 'EXCEPTION_UNKNOWN_CHECK_RAW'
 	EXCEPTION_NONE 					= 0x00
 
 	# Linux SIG values (for crashpad generated dumps)
@@ -117,17 +118,23 @@ class MINIDUMP_EXCEPTION:
 		self.NumberParameters = None
 		self.__unusedAlignment = None
 		self.ExceptionInformation = []
+		self.ExceptionCode_raw = None
 	
 	@staticmethod
 	def parse(buff):
 		me = MINIDUMP_EXCEPTION()
-		me.ExceptionCode = ExceptionCode(int.from_bytes(buff.read(4), byteorder = 'little', signed = False))
+		me.ExceptionCode_raw = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
+		try:
+			me.ExceptionCode = ExceptionCode(me.ExceptionCode_raw)
+		except:
+			me.ExceptionCode = ExceptionCode.EXCEPTION_UNKNOWN
+
 		me.ExceptionFlags = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		me.ExceptionRecord = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		me.ExceptionAddress = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		me.NumberParameters = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		me.__unusedAlignment = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for i in range(me.NumberParameters):
+		for _ in range(me.NumberParameters):
 			me.ExceptionInformation.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 			
 		return me
