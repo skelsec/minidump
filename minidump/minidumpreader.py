@@ -275,6 +275,10 @@ class MinidumpBufferedReader:
 class MinidumpFileReader:
 	def __init__(self, minidumpfile):
 		self.modules = minidumpfile.modules.modules
+		self.unloaded_modules = []
+		if minidumpfile.unloaded_modules is not None:
+			self.unloaded_modules = minidumpfile.unloaded_modules.modules
+
 		self.sysinfo = minidumpfile.sysinfo
 
 		if minidumpfile.memory_segments_64:
@@ -310,10 +314,18 @@ class MinidumpFileReader:
 				return mod
 		return None
 
+	def get_unloaded_by_name(self, module_name):
+		for mod in self.unloaded_modules:
+			if ntpath.basename(mod.name).find(module_name) != -1:
+				return mod
+		return None
+
 	def search_module(self, module_name, pattern, find_first = False, reverse_order = False, chunksize = 10*1024):
 		mod = self.get_module_by_name(module_name)
 		if mod is None:
-			raise Exception('Could not find module! %s' % module_name)
+			mod = self.get_unloaded_by_name(module_name)
+			if mod is None:
+				raise Exception('Could not find module! %s' % module_name)
 		
 		needles = []
 		for ms in self.memory_segments:
