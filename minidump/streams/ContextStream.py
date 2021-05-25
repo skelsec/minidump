@@ -24,8 +24,8 @@ class M128A:
 
     def __str__(self):
         s = ""
-        s += f"Low: {hex(self.Low)} ({self.Low}), "
-        s += f"High: {hex(self.High)} ({self.High})\n"
+        s += "Low: %x (%d)" % (self.Low, self.Low)
+        s += "High: %x (%d)\n" % (self.High, self.High)
         return s
 
 
@@ -158,10 +158,10 @@ class CTX_DUMMYSTRUCTNAME:
         s = ""
         s += "%s:\n" % ("Header")
         for head in self.Header:
-            s += "\t%s\n" % (head)
+            s += "\t%s" % (head)
         s += "%s:\n" % ("Legacy")
-        for leg in legacy:
-            s += "\t%s\n" % (leg)
+        for leg in self.Legacy:
+            s += "\t%s" % (leg)
         s += "%s: %s" % ("Xmm0", self.Xmm0)
         s += "%s: %s" % ("Xmm1", self.Xmm1)
         s += "%s: %s" % ("Xmm2", self.Xmm2)
@@ -178,6 +178,8 @@ class CTX_DUMMYSTRUCTNAME:
         s += "%s: %s" % ("Xmm13", self.Xmm13)
         s += "%s: %s" % ("Xmm14", self.Xmm14)
         s += "%s: %s" % ("Xmm15", self.Xmm15)
+
+        return s
 
 
 class CTX_DUMMYUNIONNAME:
@@ -210,13 +212,15 @@ class CTX_DUMMYUNIONNAME:
         s += "%s: %s\n" % ("FltSave", self.FltSave)
         s += "%s:\n" % ("Q")
         for q in self.Q:
-            s += "\t%s" % (q)
+            s += "\t%s" % (q.__str__())
         for d in self.D:
-            s += "\t%d\n" % (d)
+            s += "\t%d" % (d)
         s += "%s: %s" % ("DUMMYSTRUCTNAME", self.DUMMYSTRUCTNAME)
         s += "%s:\n" %("S")
         for e in self.S:
-            s += "\t%d\n" % (e)
+            s += "\t%d" % (e)
+
+        return s
         
 
 # https:# docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-context
@@ -326,44 +330,47 @@ class CONTEXT:
 
     def __str__(self):
         s = "" 
-        s += "%13s: 0x%016x (%d)\n" % ("P1Home",self.P1Home,self.P1Home)
-        s += "%13s: 0x%016x (%d)\n" % ("P2Home",self.P2Home,self.P2Home)
-        s += "%13s: 0x%016x (%d)\n" % ("P3Home",self.P3Home,self.P3Home)
-        s += "%13s: 0x%016x (%d)\n" % ("P4Home",self.P4Home,self.P4Home)
-        s += "%13s: 0x%016x (%d)\n" % ("P5Home",self.P5Home,self.P5Home)
-        s += "%13s: 0x%016x (%d)\n" % ("P6Home",self.P6Home,self.P6Home)
-        s += "%13s: 0x%016x (%d)\n" % ("ContextFlags",self.ContextFlags,self.ContextFlags)
-        s += "%13s: 0x%016x (%d)\n" % ("MxCsr",self.MxCsr,self.MxCsr)
-        s += "%13s: 0x%016x (%d)\n" % ("SegCs",self.SegCs,self.SegCs)
-        s += "%13s: 0x%016x (%d)\n" % ("SegDs",self.SegDs,self.SegDs)
-        s += "%13s: 0x%016x (%d)\n" % ("SegEs",self.SegEs,self.SegEs)
-        s += "%13s: 0x%016x (%d)\n" % ("SegFs",self.SegFs,self.SegFs)
-        s += "%13s: 0x%016x (%d)\n" % ("SegGs",self.SegGs,self.SegGs)
-        s += "%13s: 0x%016x (%d)\n" % ("SegSs",self.SegSs,self.SegSs)
-        s += "%13s: 0x%016x (%d)\n" % ("EFlags",self.EFlags,self.EFlags)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr0",self.Dr0,self.Dr0)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr1",self.Dr1,self.Dr1)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr2",self.Dr2,self.Dr2)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr3",self.Dr3,self.Dr3)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr6",self.Dr6,self.Dr6)
-        s += "%13s: 0x%016x (%d)\n" % ("Dr7",self.Dr7,self.Dr7)
-        s += "%13s: 0x%016x (%d)\n" % ("Rax",self.Rax,self.Rax)
-        s += "%13s: 0x%016x (%d)\n" % ("Rcx",self.Rcx,self.Rcx)
-        s += "%13s: 0x%016x (%d)\n" % ("Rdx",self.Rdx,self.Rdx)
-        s += "%13s: 0x%016x (%d)\n" % ("Rbx",self.Rbx,self.Rbx)
-        s += "%13s: 0x%016x (%d)\n" % ("Rsp",self.Rsp,self.Rsp)
-        s += "%13s: 0x%016x (%d)\n" % ("Rbp",self.Rbp,self.Rbp)
-        s += "%13s: 0x%016x (%d)\n" % ("Rsi",self.Rsi,self.Rsi)
-        s += "%13s: 0x%016x (%d)\n" % ("Rdi",self.Rdi,self.Rdi)
-        s += "%13s: 0x%016x (%d)\n" % ("R8",self.R8,self.R8)
-        s += "%13s: 0x%016x (%d)\n" % ("R9",self.R9,self.R9)
-        s += "%13s: 0x%016x (%d)\n" % ("R10",self.R10,self.R10)
-        s += "%13s: 0x%016x (%d)\n" % ("R11",self.R11,self.R11)
-        s += "%13s: 0x%016x (%d)\n" % ("R12",self.R12,self.R12)
-        s += "%13s: 0x%016x (%d)\n" % ("R13",self.R13,self.R13)
-        s += "%13s: 0x%016x (%d)\n" % ("R14",self.R14,self.R14)
-        s += "%13s: 0x%016x (%d)\n" % ("R15",self.R15,self.R15)
-        s += "%13s: 0x%016x (%d)\n" % ("Rip",self.Rip,self.Rip)
+        s += "%s: 0x%x (%d)\n" % ("P1Home",self.P1Home,self.P1Home)
+        s += "%s: 0x%x (%d)\n" % ("P2Home",self.P2Home,self.P2Home)
+        s += "%s: 0x%x (%d)\n" % ("P3Home",self.P3Home,self.P3Home)
+        s += "%s: 0x%x (%d)\n" % ("P4Home",self.P4Home,self.P4Home)
+        s += "%s: 0x%x (%d)\n" % ("P5Home",self.P5Home,self.P5Home)
+        s += "%s: 0x%x (%d)\n" % ("P6Home",self.P6Home,self.P6Home)
+        s += "%s: 0x%x (%d)\n" % ("ContextFlags",self.ContextFlags,self.ContextFlags)
+        s += "%s: 0x%x (%d)\n" % ("MxCsr",self.MxCsr,self.MxCsr)
+        s += "%s: 0x%x (%d)\n" % ("SegCs",self.SegCs,self.SegCs)
+        s += "%s: 0x%x (%d)\n" % ("SegDs",self.SegDs,self.SegDs)
+        s += "%s: 0x%x (%d)\n" % ("SegEs",self.SegEs,self.SegEs)
+        s += "%s: 0x%x (%d)\n" % ("SegFs",self.SegFs,self.SegFs)
+        s += "%s: 0x%x (%d)\n" % ("SegGs",self.SegGs,self.SegGs)
+        s += "%s: 0x%x (%d)\n" % ("SegSs",self.SegSs,self.SegSs)
+        s += "%s: 0x%x (%d)\n" % ("EFlags",self.EFlags,self.EFlags)
+        s += "%s: 0x%x (%d)\n" % ("Dr0",self.Dr0,self.Dr0)
+        s += "%s: 0x%x (%d)\n" % ("Dr1",self.Dr1,self.Dr1)
+        s += "%s: 0x%x (%d)\n" % ("Dr2",self.Dr2,self.Dr2)
+        s += "%s: 0x%x (%d)\n" % ("Dr3",self.Dr3,self.Dr3)
+        s += "%s: 0x%x (%d)\n" % ("Dr6",self.Dr6,self.Dr6)
+        s += "%s: 0x%x (%d)\n" % ("Dr7",self.Dr7,self.Dr7)
+        s += "%s: 0x%x (%d)\n" % ("Rax",self.Rax,self.Rax)
+        s += "%s: 0x%x (%d)\n" % ("Rcx",self.Rcx,self.Rcx)
+        s += "%s: 0x%x (%d)\n" % ("Rdx",self.Rdx,self.Rdx)
+        s += "%s: 0x%x (%d)\n" % ("Rbx",self.Rbx,self.Rbx)
+        s += "%s: 0x%x (%d)\n" % ("Rsp",self.Rsp,self.Rsp)
+        s += "%s: 0x%x (%d)\n" % ("Rbp",self.Rbp,self.Rbp)
+        s += "%s: 0x%x (%d)\n" % ("Rsi",self.Rsi,self.Rsi)
+        s += "%s: 0x%x (%d)\n" % ("Rdi",self.Rdi,self.Rdi)
+        s += "%s: 0x%x (%d)\n" % ("R8",self.R8,self.R8)
+        s += "%s: 0x%x (%d)\n" % ("R9",self.R9,self.R9)
+        s += "%s: 0x%x (%d)\n" % ("R10",self.R10,self.R10)
+        s += "%s: 0x%x (%d)\n" % ("R11",self.R11,self.R11)
+        s += "%s: 0x%x (%d)\n" % ("R12",self.R12,self.R12)
+        s += "%s: 0x%x (%d)\n" % ("R13",self.R13,self.R13)
+        s += "%s: 0x%x (%d)\n" % ("R14",self.R14,self.R14)
+        s += "%s: 0x%x (%d)\n" % ("R15",self.R15,self.R15)
+        s += "%s: 0x%x (%d)\n" % ("Rip",self.Rip,self.Rip)
+        s += "%s:" % ("DUMMYUNIONNAME")
+        s += self.DUMMYUNIONNAME.__str__()
+
         return s
 
 
@@ -394,6 +401,18 @@ class WOW64_FLOATING_SAVE_AREA:
         ctx.Cr0NpxState = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
         return ctx
         
+    def __str__(self):
+        s = ''
+        s += "ControlWord: %x (%d)\n" % (self.ControlWord, self.ControlWord)
+        s += "StatusWord: %x (%d)\n" % (self.StatusWord, self.StatusWord)
+        s += "TagWord: %x (%d)\n" % (self.TagWord, self.TagWord)
+        s += "ErrorOffset: %x (%d)\n" % (self.ErrorOffset, self.ErrorOffset)
+        s += "ErrorSelector: %x (%d)\n" % (self.ErrorSelector, self.ErrorSelector)
+        s += "DataOffset: %x (%d)\n" % (self.DataOffset, self.DataOffset)
+        s += "DataSelector: %x (%d)\n" % (self.DataSelector, self.DataSelector)
+        s += "RegisterArea: %s\n" % str(self.RegisterArea)
+        s += "Cr0NpxState: %x (%d)" % (self.Cr0NpxState, self.Cr0NpxState)
+        return s
 
 # https:# docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-wow64_context
 class WOW64_CONTEXT:
@@ -460,30 +479,30 @@ class WOW64_CONTEXT:
 
     def __str__(self):
         s = ''
-        s += "%s: %x (%d)" % ("ContextFlags", self.ContextFlags, self.ContextFlags)
-        s += "%s: %x (%d)" % ("Dr0", self.Dr0, self.Dr0)
-        s += "%s: %x (%d)" % ("Dr1", self.Dr1, self.Dr1)
-        s += "%s: %x (%d)" % ("Dr2", self.Dr2, self.Dr2)
-        s += "%s: %x (%d)" % ("Dr3", self.Dr3, self.Dr3)
-        s += "%s: %x (%d)" % ("Dr6", self.Dr6, self.Dr6)
-        s += "%s: %x (%d)" % ("Dr7", self.Dr7, self.Dr7)
-        s += "%s: %x (%d)" % self.FloatSave.__str__()
-        s += "%s: %x (%d)" % ("SegGs", self.SegGs, self.SegGs)
-        s += "%s: %x (%d)" % ("SegFs", self.SegFs, self.SegFs)
-        s += "%s: %x (%d)" % ("SegEs", self.SegEs, self.SegEs)
-        s += "%s: %x (%d)" % ("SegDs", self.SegDs, self.SegDs)
-        s += "%s: %x (%d)" % ("Edi", self.Edi, self.Edi)
-        s += "%s: %x (%d)" % ("Esi", self.Esi, self.Esi)
-        s += "%s: %x (%d)" % ("Ebx", self.Ebx, self.Ebx)
-        s += "%s: %x (%d)" % ("Edx", self.Edx, self.Edx)
-        s += "%s: %x (%d)" % ("Ecx", self.Ecx, self.Ecx)
-        s += "%s: %x (%d)" % ("Eax", self.Eax, self.Eax)
-        s += "%s: %x (%d)" % ("Ebp", self.Ebp, self.Ebp)
-        s += "%s: %x (%d)" % ("Eip", self.Eip, self.Eip)
-        s += "%s: %x (%d)" % ("SegCs", self.SegCs, self.SegCs)
-        s += "%s: %x (%d)" % ("EFlags", self.EFlags, self.EFlags)
-        s += "%s: %x (%d)" % ("Esp", self.Esp, self.Esp)
-        s += "%s: %x (%d)" % ("SegSs", self.SegSs, self.SegSs)
-        s += "%s: %x (%d)" % ("ExtendedRegisters", self.ExtendedRegisters, self.ExtendedRegisters)
+        s += "%s: %x (%d)\n" % ("ContextFlags", self.ContextFlags, self.ContextFlags)
+        s += "%s: %x (%d)\n" % ("Dr0", self.Dr0, self.Dr0)
+        s += "%s: %x (%d)\n" % ("Dr1", self.Dr1, self.Dr1)
+        s += "%s: %x (%d)\n" % ("Dr2", self.Dr2, self.Dr2)
+        s += "%s: %x (%d)\n" % ("Dr3", self.Dr3, self.Dr3)
+        s += "%s: %x (%d)\n" % ("Dr6", self.Dr6, self.Dr6)
+        s += "%s: %x (%d)\n" % ("Dr7", self.Dr7, self.Dr7)
+        s += "%s: %s\n" % ("FloatSave", self.FloatSave.__str__())
+        s += "%s: %x (%d)\n" % ("SegGs", self.SegGs, self.SegGs)
+        s += "%s: %x (%d)\n" % ("SegFs", self.SegFs, self.SegFs)
+        s += "%s: %x (%d)\n" % ("SegEs", self.SegEs, self.SegEs)
+        s += "%s: %x (%d)\n" % ("SegDs", self.SegDs, self.SegDs)
+        s += "%s: %x (%d)\n" % ("Edi", self.Edi, self.Edi)
+        s += "%s: %x (%d)\n" % ("Esi", self.Esi, self.Esi)
+        s += "%s: %x (%d)\n" % ("Ebx", self.Ebx, self.Ebx)
+        s += "%s: %x (%d)\n" % ("Edx", self.Edx, self.Edx)
+        s += "%s: %x (%d)\n" % ("Ecx", self.Ecx, self.Ecx)
+        s += "%s: %x (%d)\n" % ("Eax", self.Eax, self.Eax)
+        s += "%s: %x (%d)\n" % ("Ebp", self.Ebp, self.Ebp)
+        s += "%s: %x (%d)\n" % ("Eip", self.Eip, self.Eip)
+        s += "%s: %x (%d)\n" % ("SegCs", self.SegCs, self.SegCs)
+        s += "%s: %x (%d)\n" % ("EFlags", self.EFlags, self.EFlags)
+        s += "%s: %x (%d)\n" % ("Esp", self.Esp, self.Esp)
+        s += "%s: %x (%d)\n" % ("SegSs", self.SegSs, self.SegSs)
+        s += "%s: %s\n" % ("ExtendedRegisters", str(self.ExtendedRegisters))
 
         return s

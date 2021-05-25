@@ -16,6 +16,7 @@ from minidump.streams import *
 from minidump.common_structs import *
 from minidump.constants import MINIDUMP_STREAM_TYPE
 from minidump.directory import MINIDUMP_DIRECTORY
+from minidump.streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
 
 class MinidumpFile:
@@ -203,6 +204,20 @@ class MinidumpFile:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
 			
 			"""
+
+		self.__parse_thread_context()
+
+	def __parse_thread_context(self):
+		if not self.sysinfo:
+			return
+		for thread in self.threads.threads:
+			rva = thread.ThreadContext.Rva
+			self.file_handle.seek(rva)
+			if self.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.AMD64:
+				thread.ContextObject = CONTEXT.parse(self.file_handle)
+			elif self.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
+				thread.ContextObject = WOW64_CONTEXT.parse(self.file_handle)
+			
 
 	def __str__(self):
 		t = '== Minidump File ==\n'
