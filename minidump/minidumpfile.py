@@ -204,8 +204,10 @@ class MinidumpFile:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
 			
 			"""
-
-		self.__parse_thread_context()
+		try:
+			self.__parse_thread_context()
+		except Exception as e:
+			logging.exception('Thread context parsing error!')
 
 	def __parse_thread_context(self):
 		if not self.sysinfo:
