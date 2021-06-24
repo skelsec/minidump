@@ -59,6 +59,7 @@ class MinidumpModule:
 			'BaseAddress',
 			'Size',
 			'Endaddress',
+			'Timestamp',
 		]
 	
 	def to_row(self):
@@ -67,6 +68,7 @@ class MinidumpModule:
 			'0x%08x' % self.baseaddress,
 			hex(self.size),
 			'0x%08x' % self.endaddress,
+			'0x%08x' % self.timestamp,
 		]
 		
 		
