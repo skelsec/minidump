@@ -190,7 +190,7 @@ class MinidumpMemorySegment:
 					return fl
 				fl.append(marker + offset + self.start_virtual_address)
 				data = data[marker+1:]
-				offset = marker + 1
+				offset += marker + 1
 				if find_first is True:
 					return fl
 		
@@ -232,7 +232,7 @@ class MinidumpMemorySegment:
 					return fl
 				fl.append(marker + offset + self.start_virtual_address)
 				data = data[marker+1:]
-				offset = marker + 1
+				offset += marker + 1
 				if find_first is True:
 					return fl
 		
