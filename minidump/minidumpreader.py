@@ -103,6 +103,9 @@ class MinidumpBufferedReader:
 
 		raise Exception('Memory address 0x%08x is not in process memory space' % requested_position)
 
+	def get_reader(self):
+		return self.reader
+
 	def seek(self, offset, whence = 0):
 		"""
 		Changes the current address to an offset of offset. The whence parameter controls from which position should we count the offsets.
@@ -304,6 +307,12 @@ class MinidumpFileReader:
 			self.unpack_ptr = '<L'
 		else:
 			raise Exception('Unknown processor architecture %s! Please fix and submit PR!' % self.sysinfo.ProcessorArchitecture)
+
+	def get_handler(self):
+		return self.file_handle
+
+	def get_memory(self):
+		return self.memory_segments
 
 	def get_buffered_reader(self, segment_chunk_size = 10*1024):
 		return MinidumpBufferedReader(self, segment_chunk_size = segment_chunk_size)
