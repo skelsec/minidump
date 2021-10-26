@@ -9,7 +9,7 @@ import struct
 from ctypes.wintypes import HANDLE, BOOL, DWORD, HWND, HINSTANCE, HKEY, LPVOID, LPWSTR, PBOOL
 from ctypes import c_ulong, c_char_p, c_int, c_void_p, WinError, get_last_error, windll
 
-from privileges import enable_debug_privilege
+from minidump.utils.privileges import enable_debug_privilege
 
 if platform.system() != 'Windows':
 	raise Exception('This script will ovbiously only work on Windows')
