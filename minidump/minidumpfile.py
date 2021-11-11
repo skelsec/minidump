@@ -210,7 +210,7 @@ class MinidumpFile:
 			logging.exception('Thread context parsing error!')
 
 	def __parse_thread_context(self):
-		if not self.sysinfo:
+		if not self.sysinfo or not self.threads:
 			return
 		for thread in self.threads.threads:
 			rva = thread.ThreadContext.Rva
