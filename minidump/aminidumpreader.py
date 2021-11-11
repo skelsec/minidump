@@ -308,7 +308,7 @@ class AMinidumpFileReader:
 
 	def get_module_by_name(self, module_name):
 		for mod in self.modules:
-			if ntpath.basename(mod.name.lower()).find(module_name.lower()) != -1:
+			if ntpath.basename(mod.name).lower() == module_name.lower():
 				return mod
 		return None
 
