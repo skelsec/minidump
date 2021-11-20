@@ -31,7 +31,7 @@ class MinidumpBufferedMemorySegment:
 		self.chunks = []
 
 	def inrange(self, position):
-		return self.start_address <= position <= self.end_address
+		return self.start_address <= position < self.end_address
 
 	def remaining_len(self, position):
 		if not self.inrange(position):
@@ -183,7 +183,7 @@ class MinidumpBufferedReader:
 			return self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, None)
 
 		t = self.current_position + size
-		if not self.current_segment.inrange(t):
+		if not self.current_segment.inrange(t - 1):
 			raise Exception('Would read over segment boundaries!')
 
 		old_new_pos = self.current_position
