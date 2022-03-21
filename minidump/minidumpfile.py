@@ -14,8 +14,8 @@ from minidump.header import MinidumpHeader
 from minidump.minidumpreader import MinidumpFileReader
 from minidump.streams import *
 from minidump.common_structs import *
-from minidump.constants import MINIDUMP_STREAM_TYPE
-from minidump.directory import MINIDUMP_DIRECTORY
+from minidump.constants import MINIDUMP_STREAM_TYPE, MINIDUMP_TYPE
+from minidump.directory import MINIDUMP_DIRECTORY, DirectoryBuffer
 from minidump.streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
 class MinidumpFile:
