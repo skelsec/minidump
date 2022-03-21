@@ -1,5 +1,6 @@
 from minidump.constants import MINIDUMP_TYPE
 from minidump.exceptions import MinidumpHeaderFlagsException, MinidumpHeaderSignatureMismatchException
+import io
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
 class MinidumpHeader:
@@ -44,6 +45,12 @@ class MinidumpHeader:
 			raise MinidumpHeaderFlagsException('Could not parse header flags!')
 
 		return mh
+
+	@staticmethod
+	async def aparse(abuff):
+		adata = await abuff.read(32)
+		buff = io.BytesIO(adata)
+		return MinidumpHeader.parse(buff)
 
 	def __str__(self):
 		t = '== MinidumpHeader ==\n'

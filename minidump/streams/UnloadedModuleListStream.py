@@ -79,6 +79,21 @@ class MinidumpUnloadedModule:
 		mm.name = MINIDUMP_STRING.get_from_rva(mod.ModuleNameRva, buff)
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
+
+	@staticmethod
+	async def aparse(mod, buff):
+		"""
+		mod: MINIDUMP_MODULE
+		buff: file handle
+		"""
+		mm = MinidumpUnloadedModule()
+		mm.baseaddress = mod.BaseOfImage
+		mm.size = mod.SizeOfImage
+		mm.checksum = mod.CheckSum
+		mm.timestamp = mod.TimeDateStamp
+		mm.name = await MINIDUMP_STRING.aget_from_rva(mod.ModuleNameRva, buff)
+		mm.endaddress = mm.baseaddress + mm.size
+		return mm
 		
 	def assign_memory_regions(self, segments):
 		for segment in segments:
@@ -119,6 +134,20 @@ class MinidumpUnloadedModuleList:
 		for _ in range(muml.NumberOfEntries):
 			mod = MINIDUMP_UNLOADED_MODULE.parse(chunk)
 			t.modules.append(MinidumpUnloadedModule.parse(mod, buff))
+		
+		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpUnloadedModuleList()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		muml = MINIDUMP_UNLOADED_MODULE_LIST.parse(chunk)
+		for _ in range(muml.NumberOfEntries):
+			mod = MINIDUMP_UNLOADED_MODULE.parse(chunk)
+			dr = await MinidumpUnloadedModule.aparse(mod, buff)
+			t.modules.append(dr)
 		
 		return t
 		

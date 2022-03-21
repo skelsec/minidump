@@ -7,7 +7,7 @@
 import io
 import enum
 import logging
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PROCESSOR_ARCHITECTURE(enum.Enum):
@@ -15,6 +15,7 @@ class PROCESSOR_ARCHITECTURE(enum.Enum):
 	ARM = 5 #ARM
 	IA64 = 6 #Intel Itanium
 	INTEL = 0 #x86
+	AARCH64 = 0x8003 #ARM64
 	UNKNOWN = 0xffff #Unknown processor
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PROCESSOR_LEVEL(enum.Enum):
@@ -22,19 +23,19 @@ class PROCESSOR_LEVEL(enum.Enum):
 	INTEL_80486 = 4
 	INTEL_PENTIUM = 5
 	INTEL_PENTIUM_PRO = 6 #or Pentium II
-# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx	
+# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PRODUCT_TYPE(enum.Enum):
 	VER_UNIDENTIFIED_PRODUCT 	= 0x0000000 # Crashpad des not set ProductType value on non-Windows systems
 	VER_NT_WORKSTATION 			= 0x0000001 # The system is running Windows XP, Windows Vista, Windows 7, or Windows 8.
 	VER_NT_DOMAIN_CONTROLLER 	= 0x0000002 # The system is a domain controller.
 	VER_NT_SERVER 				= 0x0000003 # The system is a server.
-	
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PLATFORM_ID(enum.Enum):
 	VER_PLATFORM_WIN32s = 0 #Not supported
 	VER_PLATFORM_WIN32_WINDOWS = 1 #Not supported.
 	VER_PLATFORM_WIN32_NT = 2 #The operating system platform is Windows.
-	
+
 	# source : https://github.com/chromium/crashpad/blob/4b05be4265c0ffacfce26d7db7644ffbf9037696/minidump/minidump_extensions.h#L239
 	VER_PLATFORM_CRASHPAD_MAC       = 0x8101
 	VER_PLATFORM_CRASHPAD_IOS       = 0x8102
@@ -117,13 +118,13 @@ class MINIDUMP_SYSTEM_INFO:
 			buffer.write(self.AMDExtendedCpuFeatures.to_bytes(4, byteorder = 'little', signed = False))
 		else:
 			for pf in self.ProcessorFeatures:
-				buffer.write(pf.to_bytes(8, byteorder = 'little', signed = False))
+				t += pf.to_bytes(8, byteorder = 'little', signed = False)
 
-		#FIXME this should never be happening if the parsing was totally correct :()
-		if buffer.tell() - start < 0x38:
-			buffer.write(b'\x00' * (0x38 - (buffer.tell() - start)))
+		if data_buffer is None:
+			return t
+		else:
+			data_buffer.write(t)
 
-		
 	@staticmethod
 	def parse(buff):
 		msi = MINIDUMP_SYSTEM_INFO()
@@ -151,7 +152,7 @@ class MINIDUMP_SYSTEM_INFO:
 		else:
 			for _ in range(2):
 				msi.ProcessorFeatures.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
-		
+
 		return msi
 
 	def __str__(self):
@@ -159,7 +160,7 @@ class MINIDUMP_SYSTEM_INFO:
 		for k in self.__dict__:
 			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
 		return t
-		
+
 class MinidumpSystemInfo:
 	def __init__(self):
 		self.ProcessorArchitecture = None
@@ -178,10 +179,10 @@ class MinidumpSystemInfo:
 		self.FeatureInformation = None
 		self.AMDExtendedCpuFeatures = None
 		self.ProcessorFeatures = None
-		
+
 		#extra
 		self.OperatingSystem = None
-		
+
 	def guess_os(self):
 		if self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType == PRODUCT_TYPE.VER_NT_WORKSTATION:
 			self.OperatingSystem = "Windows 10"
@@ -212,7 +213,7 @@ class MinidumpSystemInfo:
 			self.OperatingSystem =  "Windows XP"
 		elif self.MajorVersion == 5 and self.MinorVersion == 0:
 			self.OperatingSystem =  "Windows 2000"
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpSystemInfo()
@@ -245,8 +246,38 @@ class MinidumpSystemInfo:
 			logging.log(1, 'Failed to guess OS! MajorVersion: %s MinorVersion %s BuildNumber %s ProductType: %s' % (t.MajorVersion, t.MinorVersion, t.BuildNumber, t.ProductType ))
 			t.OperatingSystem = None
 		return t
-		
-	
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpSystemInfo()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		si = MINIDUMP_SYSTEM_INFO.parse(chunk)
+		t.ProcessorArchitecture = si.ProcessorArchitecture
+		t.ProcessorLevel = si.ProcessorLevel
+		t.ProcessorRevision = si.ProcessorRevision
+		t.NumberOfProcessors = si.NumberOfProcessors
+		t.ProductType = si.ProductType
+		t.MajorVersion = si.MajorVersion
+		t.MinorVersion = si.MinorVersion
+		t.BuildNumber = si.BuildNumber
+		t.PlatformId = si.PlatformId
+		t.CSDVersion = await MINIDUMP_STRING.aget_from_rva(si.CSDVersionRva, buff)
+		t.SuiteMask = si.SuiteMask
+		t.VendorId = si.VendorId
+		t.VersionInformation = si.VersionInformation
+		t.FeatureInformation = si.FeatureInformation
+		t.AMDExtendedCpuFeatures = si.AMDExtendedCpuFeatures
+		t.ProcessorFeatures = si.ProcessorFeatures
+		try:
+			t.guess_os()
+		except Exception as e:
+			logging.log(1, 'Failed to guess OS! MajorVersion: %s MinorVersion %s BuildNumber %s ProductType: %s' % (t.MajorVersion, t.MinorVersion, t.BuildNumber, t.ProductType ))
+			t.OperatingSystem = None
+		return t
+
+
 	def __str__(self):
 		t = '== System Info ==\n'
 		t += 'ProcessorArchitecture %s\n' % self.ProcessorArchitecture
@@ -266,5 +297,5 @@ class MinidumpSystemInfo:
 		t += 'FeatureInformation %s\n' % self.FeatureInformation
 		t += 'AMDExtendedCpuFeatures %s\n' % self.AMDExtendedCpuFeatures
 		t += 'ProcessorFeatures %s\n' % ' '.join( [hex(x) for x in self.ProcessorFeatures] )
-		
+
 		return t

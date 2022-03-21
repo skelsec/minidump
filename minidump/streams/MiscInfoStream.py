@@ -123,6 +123,31 @@ class MinidumpMiscInfo:
 			t.ProcessorMaxIdleState = misc.ProcessorMaxIdleState
 			t.ProcessorCurrentIdleState = misc.ProcessorCurrentIdleState
 		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpMiscInfo()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		if dir.Location.DataSize == MINIDUMP_MISC_INFO.size:
+			misc = MINIDUMP_MISC_INFO.parse(chunk)
+			t.ProcessId = misc.ProcessId
+			t.ProcessCreateTime = misc.ProcessCreateTime
+			t.ProcessUserTime = misc.ProcessUserTime
+			t.ProcessKernelTime = misc.ProcessKernelTime
+		else:
+			misc = MINIDUMP_MISC_INFO_2.parse(chunk)
+			t.ProcessId = misc.ProcessId
+			t.ProcessCreateTime = misc.ProcessCreateTime
+			t.ProcessUserTime = misc.ProcessUserTime
+			t.ProcessKernelTime = misc.ProcessKernelTime
+			t.ProcessorMaxMhz = misc.ProcessorMaxMhz
+			t.ProcessorCurrentMhz = misc.ProcessorCurrentMhz
+			t.ProcessorMhzLimit = misc.ProcessorMhzLimit
+			t.ProcessorMaxIdleState = misc.ProcessorMaxIdleState
+			t.ProcessorCurrentIdleState = misc.ProcessorCurrentIdleState
+		return t
 		
 	def __str__(self):
 		t  = '== MinidumpMiscInfo ==\n'

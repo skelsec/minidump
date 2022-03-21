@@ -226,6 +226,19 @@ class MinidumpMemoryInfoList:
 			t.infos.append(MinidumpMemoryInfo.parse(mi, buff))
 		
 		return t
+
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpMemoryInfoList()
+		await buff.seek(dir.Location.Rva)
+		data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(data)
+		t.header = MINIDUMP_MEMORY_INFO_LIST.parse(chunk)
+		for _ in range(t.header.NumberOfEntries):
+			mi = MINIDUMP_MEMORY_INFO.parse(chunk)
+			t.infos.append(MinidumpMemoryInfo.parse(mi, None))
+		
+		return t
 		
 	def to_table(self):
 		t = []

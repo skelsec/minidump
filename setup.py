@@ -31,7 +31,7 @@ setup(
 	# Details
 	url="https://github.com/skelsec/minidump",
 
-	zip_safe = True,
+	zip_safe = False,
 	#
 	# license="LICENSE.txt",
 	description="Python library to parse Windows minidump file format",

@@ -16,6 +16,14 @@ class CommentStreamW:
 		buff.seek(dir.Location.Rva)
 		csa.data = buff.read(dir.Location.DataSize).decode('utf-16-le')
 		return csa
+	
+	@staticmethod
+	async def aparse(dir, buff):
+		csa = CommentStreamW()
+		await buff.seek(dir.Location.Rva)
+		csdata = await buff.read(dir.Location.DataSize)
+		csa.data = csdata.decode('utf-16-le')
+		return csa
 		
 	def __str__(self):
 		return 'CommentW: %s' % self.data

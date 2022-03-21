@@ -36,6 +36,22 @@ class MinidumpModule:
 		mm.versioninfo = mod.VersionInfo
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
+
+	@staticmethod
+	async def aparse(mod, buff):
+		"""
+		mod: MINIDUMP_MODULE
+		buff: file handle
+		"""
+		mm = MinidumpModule()
+		mm.baseaddress = mod.BaseOfImage
+		mm.size = mod.SizeOfImage
+		mm.checksum = mod.CheckSum
+		mm.timestamp = mod.TimeDateStamp
+		mm.name = await MINIDUMP_STRING.aget_from_rva(mod.ModuleNameRva, buff)
+		mm.versioninfo = mod.VersionInfo
+		mm.endaddress = mm.baseaddress + mm.size
+		return mm
 		
 	def inrange(self, memory_loc):
 		return self.baseaddress <= memory_loc < self.endaddress
@@ -47,6 +63,7 @@ class MinidumpModule:
 			'BaseAddress',
 			'Size',
 			'Endaddress',
+			'Timestamp',
 		]
 	
 	def to_row(self):
@@ -55,6 +72,7 @@ class MinidumpModule:
 			'0x%08x' % self.baseaddress,
 			hex(self.size),
 			'0x%08x' % self.endaddress,
+			'0x%08x' % self.timestamp,
 		]
 		
 		
@@ -229,6 +247,18 @@ class MinidumpModuleList:
 		mtl = MINIDUMP_MODULE_LIST.parse(chunk)
 		for mod in mtl.Modules:
 			t.modules.append(MinidumpModule.parse(mod, buff))
+		return t
+	
+	@staticmethod
+	async def aparse(dir, buff):
+		t = MinidumpModuleList()
+		await buff.seek(dir.Location.Rva)
+		chunk_data = await buff.read(dir.Location.DataSize)
+		chunk = io.BytesIO(chunk_data)
+		mtl = MINIDUMP_MODULE_LIST.parse(chunk)
+		for mod in mtl.Modules:
+			x = await MinidumpModule.aparse(mod, buff)
+			t.modules.append(x)
 		return t
 		
 	def to_table(self):

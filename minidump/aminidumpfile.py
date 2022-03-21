@@ -11,14 +11,28 @@ import struct
 import logging
 
 from minidump.header import MinidumpHeader
-from minidump.minidumpreader import MinidumpFileReader
+from minidump.aminidumpreader import AMinidumpFileReader
 from minidump.streams import *
 from minidump.common_structs import *
 from minidump.constants import MINIDUMP_STREAM_TYPE
 from minidump.directory import MINIDUMP_DIRECTORY
-from minidump.streams.SystemInfoStream import PROCESSOR_ARCHITECTURE
 
-class MinidumpFile:
+
+class AsyncFile:
+	def __init__(self, filename):
+		self.filename = filename
+		self.fhandle = open(filename, 'rb')
+	
+	async def read(self, n = -1):
+		return self.fhandle.read(n)
+
+	async def seek(self, n, beg = 0):
+		return self.fhandle.seek(n, beg)
+
+	def tell(self):
+		return self.fhandle.tell()
+
+class AMinidumpFile:
 	def __init__(self):
 		self.filename = None
 		self.file_handle = None
@@ -40,152 +54,61 @@ class MinidumpFile:
 		self.memory_info = None
 		self.thread_info = None
 
-		self.writer = None
-
-	def to_buffer(self, buffer):
-		"""
-		Serializes the contents of the minidumpfile to a buffer/file handle
-		Writer must be already specified!
-		"""
-		databuffer = io.BytesIO() # data buffer is where the actual directory data will be stored, except the full memory dump!
-		mem64_present = False
-		mem_present = False
-
-		self.header = MinidumpHeader()
-		self.header.Version = 42899
-		self.header.ImplementationVersion = 41146
-		self.header.NumberOfStreams = len(self.writer.get_available_directories())
-		self.header.Flags = 2
-		self.header.StreamDirectoryRva = buffer.tell() + 32
-		
-		hdr_bytes = self.header.to_bytes()
-		buffer.write(hdr_bytes)
-		databuffer.write(b'\x00' * len(hdr_bytes))
-		for directory in self.writer.get_available_directories():
-			databuffer.write(b'\x00' * 12)
-		
-		databuff_trim = databuffer.tell()
-		offset = databuff_trim
-		for directory in self.writer.get_available_directories():
-			directory.Location = MINIDUMP_LOCATION_DESCRIPTOR()
-			directory.Location.Rva = databuffer.tell()
-			db = DirectoryBuffer(offset = offset)
-			if directory.StreamType == MINIDUMP_STREAM_TYPE.SystemInfoStream:
-				self.writer.get_sysinfo(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.ModuleListStream:
-				self.writer.get_modules(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.MemoryInfoListStream:
-				self.writer.get_sections(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.UnloadedModuleListStream:
-				self.writer.get_unloaded_modules(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.HandleDataStream:
-				self.writer.get_handle_data(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.ThreadInfoListStream:
-				self.writer.get_threadinfo(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.ThreadListStream:
-				self.writer.get_threads(db)
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.Memory64ListStream:
-				mem64_present = True
-				continue #skipping this!
-			elif directory.StreamType == MINIDUMP_STREAM_TYPE.MemoryListStream:
-				mem_present = True
-				continue #skipping this!
-			#else:
-			#	#raise Exception('Unknown directory type here!')
-			
-			buffsize = db.buffer.tell()
-			databuffer.write(db.finalize())
-			#directory.Location.DataSize = 
-			directory.Location.DataSize = buffsize
-			offset += databuffer.tell() - directory.Location.Rva
-			#input(hex(directory.Location.DataSize))
-			directory.to_buffer(buffer)
-
-		if mem64_present is True:
-			# if memory is present, we add one more directory entry to the directory list, and finalize the header
-			end_pos = buffer.tell() #this is stored to update the actual size of the memory stream after dumping!
-
-			memdir = MINIDUMP_DIRECTORY()
-			memdir.Location = MINIDUMP_LOCATION_DESCRIPTOR() 
-			memdir.Location.Rva = databuffer.tell()
-			memdir.StreamType = MINIDUMP_STREAM_TYPE.Memory64ListStream
-			memdir.Location.DataSize = 0 #marking it as zero now. will need to update this later! #databuffer.tell() - directory.Location.Rva
-			memdir.to_buffer(buffer)
-
-			
-			
-			databuffer.seek(databuff_trim,0)
-			buffer.write(databuffer.read())
-			datasize = self.writer.get_memory(buffer) # here we use the merged buffer (or the actual file) because memory to dump might be huge
-			
-			buffer.seek(end_pos + 4) #skipping the type
-			buffer.write(datasize.to_bytes(4, byteorder = 'little', signed = False))
-
-			print(datasize)
-			return
-			
-			
-
-		elif mem_present is True:
-			raise Exception('Not yet implemented!')
-			
-
 	@staticmethod
-	def parse(filename):
-		mf = MinidumpFile()
+	async def parse(filename):
+		mf = AMinidumpFile()
 		mf.filename = filename
-		mf.file_handle = open(filename, 'rb')
-		mf._parse()
+		mf.file_handle = AsyncFile(filename)
+		await mf._parse()
 		return mf
 
 	@staticmethod
-	def parse_external(file_handle, filename = ''):
+	async def parse_external(file_handle, filename = ''):
 		"""
 		External file handle must be an object that exposes basic file IO functionality
 		that you'd get by python's file buffer (read, seek, tell etc.)
 		"""
-		mf = MinidumpFile()
+		mf = AMinidumpFile()
 		mf.filename = filename
 		mf.file_handle = file_handle
-		mf._parse()
+		await mf._parse()
 		return mf
 
 	@staticmethod
-	def parse_bytes(data):
-		return MinidumpFile.parse_buff(io.BytesIO(data))
+	async def parse_bytes(data):
+		return await AMinidumpFile.parse_buff(io.BytesIO(data))
 
 	@staticmethod
 	def parse_buff(buffer):
-		mf = MinidumpFile()
+		mf = AMinidumpFile()
 		mf.file_handle = buffer
 		mf._parse()
 		return mf
 
 	def get_reader(self):
-		return MinidumpFileReader(self)
+		return AMinidumpFileReader(self)
 
-	def _parse(self):
-		self.__parse_header()
-		print(self.header)
-		self.__parse_directories()
+	async def _parse(self):
+		await self.__parse_header()
+		await self.__parse_directories()
 
-	def __parse_header(self):
-		self.header = MinidumpHeader.parse(self.file_handle)
+	async def __parse_header(self):
+		self.header = await MinidumpHeader.aparse(self.file_handle)
 		for i in range(0, self.header.NumberOfStreams):
-			self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
-			minidump_dir = MINIDUMP_DIRECTORY.parse(self.file_handle)
+			await self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
+			minidump_dir = await MINIDUMP_DIRECTORY.aparse(self.file_handle)
 			
 			if minidump_dir:
 				self.directories.append(minidump_dir)
 			else:
-				self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
-				user_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(self.file_handle)
+				await self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
+				t = await self.file_handle.read(4)
+				user_stream_type_value = int.from_bytes(t, byteorder = 'little', signed = False)
 				logging.debug('Found Unknown UserStream directory Type: %x' % (user_stream_type_value))
 
-	def __parse_directories(self):
-		
+	async def __parse_directories(self):
+
 		for dir in self.directories:
-			#print(dir.StreamType)
 			if dir.StreamType == MINIDUMP_STREAM_TYPE.UnusedStream:
 				logging.debug('Found UnusedStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				continue # Reserved. Do not use this enumeration value.
@@ -197,51 +120,51 @@ class MinidumpFile:
 				continue # Reserved. Do not use this enumeration value.
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ThreadListStream:
 				logging.debug('Found ThreadListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.threads = MinidumpThreadList.parse(dir, self.file_handle)
+				self.threads = await MinidumpThreadList.aparse(dir, self.file_handle)
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ModuleListStream:
 				logging.debug('Found ModuleListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.modules = MinidumpModuleList.parse(dir, self.file_handle)
+				self.modules = await MinidumpModuleList.aparse(dir, self.file_handle)
 				#logging.debug(str(modules_list))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.MemoryListStream:
 				logging.debug('Found MemoryListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.memory_segments = MinidumpMemoryList.parse(dir, self.file_handle)
+				self.memory_segments = await MinidumpMemoryList.aparse(dir, self.file_handle)
 				#logging.debug(str(self.memory_segments))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.SystemInfoStream:
 				logging.debug('Found SystemInfoStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.sysinfo = MinidumpSystemInfo.parse(dir, self.file_handle)
+				self.sysinfo = await MinidumpSystemInfo.aparse(dir, self.file_handle)
 				#logging.debug(str(self.sysinfo))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ThreadExListStream:
 				logging.debug('Found ThreadExListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.threads_ex = MinidumpThreadExList.parse(dir, self.file_handle)
+				self.threads_ex = await MinidumpThreadExList.aparse(dir, self.file_handle)
 				#logging.debug(str(self.threads_ex))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.Memory64ListStream:
 				logging.debug('Found Memory64ListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.memory_segments_64 = MinidumpMemory64List.parse(dir, self.file_handle)
+				self.memory_segments_64 = await MinidumpMemory64List.aparse(dir, self.file_handle)
 				#logging.debug(str(self.memory_segments_64))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.CommentStreamA:
 				logging.debug('Found CommentStreamA @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.comment_a = CommentStreamA.parse(dir, self.file_handle)
+				self.comment_a = await CommentStreamA.aparse(dir, self.file_handle)
 				#logging.debug(str(self.comment_a))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.CommentStreamW:
 				logging.debug('Found CommentStreamW @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.comment_w = CommentStreamW.parse(dir, self.file_handle)
+				self.comment_w = await CommentStreamW.aparse(dir, self.file_handle)
 				#logging.debug(str(self.comment_w))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ExceptionStream:
 				logging.debug('Found ExceptionStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.exception = ExceptionList.parse(dir, self.file_handle)
+				self.exception = await ExceptionList.aparse(dir, self.file_handle)
 				#logging.debug(str(self.comment_w))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.HandleDataStream:
 				logging.debug('Found HandleDataStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.handles = MinidumpHandleDataStream.parse(dir, self.file_handle)
+				self.handles = await MinidumpHandleDataStream.aparse(dir, self.file_handle)
 				#logging.debug(str(self.handles))
 				continue
 
@@ -252,22 +175,22 @@ class MinidumpFile:
 
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.UnloadedModuleListStream:
 				logging.debug('Found UnloadedModuleListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.unloaded_modules = MinidumpUnloadedModuleList.parse(dir, self.file_handle)
+				self.unloaded_modules = await MinidumpUnloadedModuleList.aparse(dir, self.file_handle)
 				#logging.debug(str(self.unloaded_modules))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.MiscInfoStream:
 				logging.debug('Found MiscInfoStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.misc_info = MinidumpMiscInfo.parse(dir, self.file_handle)
+				self.misc_info = await MinidumpMiscInfo.aparse(dir, self.file_handle)
 				#logging.debug(str(self.misc_info))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.MemoryInfoListStream:
 				logging.debug('Found MemoryInfoListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.memory_info = MinidumpMemoryInfoList.parse(dir, self.file_handle)
+				self.memory_info = await MinidumpMemoryInfoList.aparse(dir, self.file_handle)
 				#logging.debug(str(self.memory_info))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.ThreadInfoListStream:
 				logging.debug('Found ThreadInfoListStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
-				self.thread_info = MinidumpThreadInfoList.parse(dir, self.file_handle)
+				self.thread_info = await MinidumpThreadInfoList.aparse(dir, self.file_handle)
 				logging.debug(str(self.thread_info))
 				continue
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.SystemMemoryInfoStream:
@@ -295,22 +218,6 @@ class MinidumpFile:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
 			
 			"""
-		try:
-			self.__parse_thread_context()
-		except Exception as e:
-			logging.exception('Thread context parsing error!')
-
-	def __parse_thread_context(self):
-		if not self.sysinfo or not self.threads:
-			return
-		for thread in self.threads.threads:
-			rva = thread.ThreadContext.Rva
-			self.file_handle.seek(rva)
-			if self.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.AMD64:
-				thread.ContextObject = CONTEXT.parse(self.file_handle)
-			elif self.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
-				thread.ContextObject = WOW64_CONTEXT.parse(self.file_handle)
-			
 
 	def __str__(self):
 		t = '== Minidump File ==\n'

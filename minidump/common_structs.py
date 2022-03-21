@@ -19,6 +19,15 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		mld.DataSize = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mld.Rva = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		return mld
+
+	@staticmethod
+	async def aparse(buff):
+		mld = MINIDUMP_LOCATION_DESCRIPTOR()
+		t = await buff.read(4)
+		mld.DataSize = int.from_bytes(t, byteorder = 'little', signed = False)
+		t = await buff.read(4)
+		mld.Rva = int.from_bytes(t, byteorder = 'little', signed = False)
+		return mld
 	
 	def __str__(self):
 		t = 'Size: %s File offset: %s' % (self.DataSize, self.Rva)
@@ -69,6 +78,14 @@ class MINIDUMP_STRING:
 		ms.Length = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		ms.Buffer = buff.read(ms.Length)
 		return ms
+
+	@staticmethod
+	async def aparse(buff):
+		ms = MINIDUMP_STRING()
+		t = await buff.read(4)
+		ms.Length = int.from_bytes(t, byteorder = 'little', signed = False)
+		ms.Buffer = await buff.read(ms.Length)
+		return ms
 		
 	@staticmethod
 	def get_from_rva(rva, buff):
@@ -76,7 +93,16 @@ class MINIDUMP_STRING:
 		buff.seek(rva, 0)
 		ms = MINIDUMP_STRING.parse(buff)
 		buff.seek(pos, 0)
-		return ms.Buffer.decode(ms.encoding)
+
+		return ms.Buffer.decode('utf-16-le')
+	
+	@staticmethod
+	async def aget_from_rva(rva, buff):
+		pos = buff.tell()
+		await buff.seek(rva, 0)
+		ms = await MINIDUMP_STRING.aparse(buff)
+		await buff.seek(pos, 0)
+		return ms.Buffer.decode('utf-16-le')
 		
 class MinidumpMemorySegment:
 	def __init__(self):
@@ -99,19 +125,19 @@ class MinidumpMemorySegment:
 		return mms
 	
 	@staticmethod
-	def parse_full(memory_decriptor, buff, rva):
+	def parse_full(memory_decriptor, rva):
 		mms = MinidumpMemorySegment()
 		mms.start_virtual_address = memory_decriptor.StartOfMemoryRange
 		mms.size = memory_decriptor.DataSize
 		mms.start_file_address = rva
 		mms.end_virtual_address = mms.start_virtual_address + mms.size
-		return mms
-		
+		return mms		
 		
 	def inrange(self, virt_addr):
 		if virt_addr >= self.start_virtual_address and virt_addr < self.end_virtual_address:
 			return True
 		return False
+	
 	def read(self, virtual_address, size, file_handler):
 		if virtual_address > self.end_virtual_address or virtual_address < self.start_virtual_address:
 			raise Exception('Reading from wrong segment!')
@@ -125,25 +151,105 @@ class MinidumpMemorySegment:
 		data = file_handler.read(size)
 		file_handler.seek(pos, 0)
 		return data
+
+	async def aread(self, virtual_address, size, file_handler):
+		if virtual_address > self.end_virtual_address or virtual_address < self.start_virtual_address:
+			raise Exception('Reading from wrong segment!')
 		
-	def search(self, pattern, file_handler):
+		if virtual_address+size > self.end_virtual_address:
+			raise Exception('Read would cross boundaries!')
+		
+		pos = file_handler.tell()
+		offset = virtual_address - self.start_virtual_address
+		await file_handler.seek(self.start_file_address + offset, 0)
+		data = await file_handler.read(size)
+		await file_handler.seek(pos, 0)
+		return data
+		
+	def search(self, pattern, file_handler, find_first = False, chunksize = 50*1024):
 		if len(pattern) > self.size:
 			return []
 		pos = file_handler.tell()
 		file_handler.seek(self.start_file_address, 0)
-		data = file_handler.read(self.size)
-		file_handler.seek(pos, 0)
 		fl = []
-		offset = 0
-		while len(data) > len(pattern):
-			marker = data.find(pattern)
-			if marker == -1:
-				return fl
-			fl.append(marker + offset + self.start_virtual_address)
-			data = data[marker+1:]
-			offset = marker + 1
-				
+		if find_first is True:
+			chunksize = min(chunksize, self.size)
+			data = b''
+			i = 0
+			while len(data) < self.size:
+				i += 1
+				if chunksize > (self.size - len(data)):
+					chunksize = (self.size - len(data))
+				data += file_handler.read(chunksize)
+				marker = data.find(pattern)
+				if marker != -1:
+					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
+					file_handler.seek(pos, 0)
+					return [self.start_virtual_address + marker]
+			
+			
+			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
+			
+		else:
+			data = file_handler.read(self.size)
+			file_handler.seek(pos, 0)
+			
+			offset = 0
+			while len(data) > len(pattern):
+				marker = data.find(pattern)
+				if marker == -1:
+					return fl
+				fl.append(marker + offset + self.start_virtual_address)
+				data = data[marker+1:]
+				offset += marker + 1
+				if find_first is True:
+					return fl
+		
+		file_handler.seek(pos, 0)
 		return fl
+
+	async def asearch(self, pattern, file_handler, find_first = False, chunksize = 50*1024):
+		if len(pattern) > self.size:
+			return []
+		pos = file_handler.tell()
+		await file_handler.seek(self.start_file_address, 0)
+		fl = []
+		
+		if find_first is True:
+			chunksize = min(chunksize, self.size)
+			data = b''
+			i = 0
+			while len(data) < self.size:
+				i += 1
+				if chunksize > (self.size - len(data)):
+					chunksize = (self.size - len(data))
+				data += await file_handler.read(chunksize)
+				marker = data.find(pattern)
+				if marker != -1:
+					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
+					await file_handler.seek(pos, 0)
+					return [self.start_virtual_address + marker]
+			
+			
+			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
+		
+		else:
+			offset = 0
+			data = await file_handler.read(self.size)
+			await file_handler.seek(pos, 0)
+			while len(data) > len(pattern):
+				marker = data.find(pattern)
+				if marker == -1:
+					return fl
+				fl.append(marker + offset + self.start_virtual_address)
+				data = data[marker+1:]
+				offset += marker + 1
+				if find_first is True:
+					return fl
+		
+		await file_handler.seek(pos, 0)
+		return fl
+	
 	
 	@staticmethod
 	def get_header():
