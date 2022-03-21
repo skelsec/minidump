@@ -56,18 +56,19 @@ class LiveSystemReader(MinidumpSystemReader):
 		self.process_toolhelp_handle = None
 		self.sysinfo = None
 		self.meminfolist = None
+
+		# TODO: implement more streams. The currently implemented streams are the 'bare minimum' for windbg
 		self.streamtypes = [
 			MINIDUMP_STREAM_TYPE.SystemInfoStream, 
 			MINIDUMP_STREAM_TYPE.ModuleListStream, 
+			MINIDUMP_STREAM_TYPE.ThreadListStream,
+			# MINIDUMP_STREAM_TYPE.ThreadInfoListStream,
+			# MINIDUMP_STREAM_TYPE.UnloadedModuleListStream,
+			# MINIDUMP_STREAM_TYPE.HandleDataStream,
 			MINIDUMP_STREAM_TYPE.MemoryInfoListStream, 
 			MINIDUMP_STREAM_TYPE.Memory64ListStream,
-			MINIDUMP_STREAM_TYPE.UnloadedModuleListStream,
-			MINIDUMP_STREAM_TYPE.HandleDataStream,
-			MINIDUMP_STREAM_TYPE.ThreadInfoListStream,
-			#MINIDUMP_STREAM_TYPE.SystemMemoryInfoStream,
-			MINIDUMP_STREAM_TYPE.ThreadListStream,
-			
 		]
+
 		self.setup()
 
 	def get_available_directories(self):
@@ -216,31 +217,17 @@ class LiveSystemReader(MinidumpSystemReader):
 			mt.SuspendCount = 0
 			mt.PriorityClass = 0
 			mt.Priority = 40
+			# TODO: get thread teb
+			# TODO: get thread context so windbg's stack trace works
 			mt.Teb = 0
-			
 			tl.Threads.append(mt)
 
 		tl.to_buffer(databuffer)
-		
-		#te = Thread32First(self.process_toolhelp_handle)
-		#while te is not None:
-		#	dwThreadId = te.th32ThreadID
-		#	te = Thread32Next(process_toolhelp_handle)
-#
-#
-		#	('dwSize',             DWORD),
-        #('cntUsage',           DWORD),
-        #('th32ThreadID',       DWORD),
-        #('th32OwnerProcessID', DWORD),
-        #('tpBasePri',          LONG),
-        #('tpDeltaPri',         LONG),
-        #('dwFlags',            DWORD),
 
 	def get_exceptions(self, databuffer):
 		pass
 
 	def get_memory(self, buffer):
-		sp = buffer.tell()
 		read_flags = [AllocationProtect.PAGE_EXECUTE_READ,
 				AllocationProtect.PAGE_EXECUTE_READWRITE,
 				AllocationProtect.PAGE_READONLY,
@@ -261,7 +248,7 @@ class LiveSystemReader(MinidumpSystemReader):
 		memlist.to_buffer(buffer)
 		memlist_rva = buffer.tell()
 
-		buffer.seek(memlist_rva_placeholder_loc,0)
+		buffer.seek(memlist_rva_placeholder_loc, 0)
 		buffer.write(memlist_rva.to_bytes(8, byteorder = 'little', signed = False))
 		buffer.seek(memlist_rva, 0)
 
