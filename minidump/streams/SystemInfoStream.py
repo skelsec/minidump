@@ -112,9 +112,9 @@ class MINIDUMP_SYSTEM_INFO:
 		if self.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
 			for vid in self.VendorId:
 				buffer.write(vid.to_bytes(4, byteorder = 'little', signed = False))
-			buffer.write(self.VersionInformation.value.to_bytes(4, byteorder = 'little', signed = False))
-			buffer.write(self.FeatureInformation.value.to_bytes(4, byteorder = 'little', signed = False))
-			buffer.write(self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.VersionInformation.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.FeatureInformation.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.AMDExtendedCpuFeatures.to_bytes(4, byteorder = 'little', signed = False))
 		else:
 			for pf in self.ProcessorFeatures:
 				buffer.write(pf.to_bytes(8, byteorder = 'little', signed = False))

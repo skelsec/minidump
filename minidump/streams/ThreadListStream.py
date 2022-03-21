@@ -34,11 +34,11 @@ class MINIDUMP_THREAD:
 		self.PriorityClass = None
 		self.Priority = None
 		self.Teb = None
-		self.Stack = None
-		self.ThreadContext = None
+		self.Stack = MINIDUMP_MEMORY_DESCRIPTOR()
+		self.ThreadContext = MINIDUMP_LOCATION_DESCRIPTOR()
 
 	def to_bytes(self):
-		t  = self.ThreadId.value.to_bytes(4, byteorder = 'little', signed = False)
+		t  = self.ThreadId.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.SuspendCount.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.PriorityClass.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.Priority.to_bytes(4, byteorder = 'little', signed = False)
@@ -47,6 +47,9 @@ class MINIDUMP_THREAD:
 		t += self.ThreadContext.to_bytes()
 		return t
 	
+	def to_buffer(self, buffer):
+		buffer.write(self.to_bytes())
+
 	@staticmethod
 	def parse(buff):
 		mt = MINIDUMP_THREAD()

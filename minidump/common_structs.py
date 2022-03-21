@@ -1,7 +1,7 @@
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680383(v=vs.85).aspx	
 class MINIDUMP_LOCATION_DESCRIPTOR:
-	def __init__(self, DataSize = None, Rva = None):
+	def __init__(self, DataSize = 0, Rva = 0):
 		self.DataSize = DataSize
 		self.Rva = Rva
 
@@ -26,8 +26,8 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		
 class MINIDUMP_LOCATION_DESCRIPTOR64:
 	def __init__(self):
-		self.DataSize = None
-		self.Rva = None
+		self.DataSize = 0
+		self.Rva = 0
 
 	def get_size(self):
 		return 16

@@ -55,7 +55,7 @@ class MinidumpFile:
 		self.header.Version = 42899
 		self.header.ImplementationVersion = 41146
 		self.header.NumberOfStreams = len(self.writer.get_available_directories())
-		self.header.Flags = MINIDUMP_TYPE.MiniDumpNormal
+		self.header.Flags = 2
 		self.header.StreamDirectoryRva = buffer.tell() + 32
 		
 		hdr_bytes = self.header.to_bytes()
@@ -65,7 +65,6 @@ class MinidumpFile:
 			databuffer.write(b'\x00' * 12)
 		
 		databuff_trim = databuffer.tell()
-		input(hex(databuff_trim))
 		offset = databuff_trim
 		for directory in self.writer.get_available_directories():
 			directory.Location = MINIDUMP_LOCATION_DESCRIPTOR()

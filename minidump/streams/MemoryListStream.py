@@ -39,13 +39,16 @@ class MINIDUMP_MEMORY_DESCRIPTOR:
 	def __init__(self):
 		self.StartOfMemoryRange = None
 		self.MemoryLocation = None
-		
+		self.StartOfMemoryRange = 0
+		self.MemoryLocation = MINIDUMP_LOCATION_DESCRIPTOR()
+
 		#we do not use MemoryLocation but immediately store its fields in this object for easy access
-		self.DataSize = None
-		self.Rva = None
+		self.DataSize = 0
+		self.Rva = 0
 
 	def to_bytes(self):
-		t = self.StartOfMemoryRange.to_bytes(4, byteorder = 'little', signed = False)
+		t = self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False)
+		self.MemoryLocation = MINIDUMP_LOCATION_DESCRIPTOR(self.DataSize, self.Rva)
 		t += self.MemoryLocation.to_bytes()
 		return t
 		
