@@ -55,7 +55,7 @@ class MinidumpFile:
 		self.header.Version = 42899
 		self.header.ImplementationVersion = 41146
 		self.header.NumberOfStreams = len(self.writer.get_available_directories())
-		self.header.Flags = 2
+		self.header.Flags = MINIDUMP_TYPE.MiniDumpWithFullMemory | MINIDUMP_TYPE.MiniDumpIgnoreInaccessibleMemory | MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo
 		self.header.StreamDirectoryRva = buffer.tell() + 32
 		
 		hdr_bytes = self.header.to_bytes()
