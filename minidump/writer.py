@@ -212,7 +212,7 @@ class LiveSystemReader(MinidumpSystemReader):
 		tl = MINIDUMP_THREAD_LIST()
 		for thread_number in range(2):
 			mt = MINIDUMP_THREAD()
-			mt.ThreadId = 4 * thread_number
+			mt.ThreadId = 4 * (thread_number + 1)
 			mt.SuspendCount = 0
 			mt.PriorityClass = 0
 			mt.Priority = 40

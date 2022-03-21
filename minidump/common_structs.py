@@ -63,8 +63,8 @@ class MINIDUMP_STRING:
 		self.Buffer = None
 		self.encoding = encoding
 		if data is not None:
-			self.Buffer = data.encode(self.encoding)
-			self.Length = len(self.Buffer)
+			self.Buffer = data.encode(self.encoding) + b"\x00\x00"
+			self.Length = len(self.Buffer) + 2
 
 	
 	def to_bytes(self):

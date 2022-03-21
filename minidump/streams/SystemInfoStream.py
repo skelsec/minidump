@@ -120,10 +120,6 @@ class MINIDUMP_SYSTEM_INFO:
 			for pf in self.ProcessorFeatures:
 				t += pf.to_bytes(8, byteorder = 'little', signed = False)
 
-		if data_buffer is None:
-			return t
-		else:
-			data_buffer.write(t)
 
 	@staticmethod
 	def parse(buff):
