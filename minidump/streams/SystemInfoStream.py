@@ -215,10 +215,8 @@ class MinidumpSystemInfo:
 		t = MinidumpSystemInfo()
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
-		print(hexdump(chunk.read()))
 		chunk.seek(0,0)
 		si = MINIDUMP_SYSTEM_INFO.parse(chunk)
-		print(str)
 		t.ProcessorArchitecture = si.ProcessorArchitecture
 		t.ProcessorLevel = si.ProcessorLevel
 		t.ProcessorRevision = si.ProcessorRevision

@@ -121,7 +121,7 @@ class MinidumpFile:
 			buffer.seek(end_pos + 4) #skipping the type
 			buffer.write(datasize.to_bytes(4, byteorder = 'little', signed = False))
 
-			print(datasize)
+			#print(datasize)
 			return
 			
 			
@@ -166,7 +166,6 @@ class MinidumpFile:
 
 	def _parse(self):
 		self.__parse_header()
-		print(self.header)
 		self.__parse_directories()
 
 	def __parse_header(self):
@@ -185,7 +184,6 @@ class MinidumpFile:
 	def __parse_directories(self):
 		
 		for dir in self.directories:
-			#print(dir.StreamType)
 			if dir.StreamType == MINIDUMP_STREAM_TYPE.UnusedStream:
 				logging.debug('Found UnusedStream @%x Size: %d' % (dir.Location.Rva, dir.Location.DataSize))
 				continue # Reserved. Do not use this enumeration value.

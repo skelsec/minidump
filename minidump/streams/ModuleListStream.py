@@ -241,8 +241,6 @@ class MinidumpModuleList:
 	def parse(dir, buff):
 		t = MinidumpModuleList()
 		buff.seek(dir.Location.Rva)
-		input('ds %s' % dir.Location.DataSize)
-		input('rva %s' % hex(dir.Location.Rva))
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 		mtl = MINIDUMP_MODULE_LIST.parse(chunk)
 		for mod in mtl.Modules:
