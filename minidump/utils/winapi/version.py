@@ -109,4 +109,5 @@ def GetFileVersionInfoW(lptstrFilename):
     dwLen = _GetFileVersionInfoSizeW(lptstrFilename, None)
     lpData = ctypes.create_string_buffer(dwLen)  # not a string!
     _GetFileVersionInfoW(lptstrFilename, 0, dwLen, byref(lpData))
+    
     return lpData

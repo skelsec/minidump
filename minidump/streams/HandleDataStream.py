@@ -10,11 +10,17 @@ from minidump.common_structs import *
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680372(v=vs.85).aspx
 class MINIDUMP_HANDLE_DATA_STREAM:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfDescriptor = None
+		self.SizeOfHeader = 16
+		self.SizeOfDescriptor = 40
 		self.NumberOfDescriptors = None
-		self.Reserved = None
+		self.Reserved = 0
 	
+	def to_buffer(self, buffer):
+		buffer.write(self.SizeOfHeader.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfDescriptor.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.NumberOfDescriptors.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.Reserved.to_bytes(4, byteorder = 'little', signed = False))
+
 	@staticmethod
 	def parse(buff):
 		mhds = MINIDUMP_HANDLE_DATA_STREAM()
@@ -22,6 +28,11 @@ class MINIDUMP_HANDLE_DATA_STREAM:
 		mhds.SizeOfDescriptor = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.NumberOfDescriptors = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.Reserved = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
+		#print(mhds.SizeOfHeader)
+		#print(mhds.SizeOfDescriptor)
+		#print(mhds.NumberOfDescriptors)
+		#print(mhds.Reserved)
+		#print()
 			
 		return mhds
 	

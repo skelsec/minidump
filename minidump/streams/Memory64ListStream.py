@@ -13,15 +13,11 @@ class MINIDUMP_MEMORY64_LIST:
 		self.BaseRva = None
 		self.MemoryRanges = []
 
-	def get_size(self):
-		return 8 + 8 + len(self.MemoryRanges) * MINIDUMP_MEMORY_DESCRIPTOR64().get_size()
-
-	def to_bytes(self):
-		t = len(self.MemoryRanges).to_bytes(8, byteorder = 'little', signed = False)
-		t += self.BaseRva.to_bytes(8, byteorder = 'little', signed = False)
+	def to_buffer(self, buffer):
+		buffer.write(len(self.MemoryRanges).to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.BaseRva.to_bytes(8, byteorder = 'little', signed = False))
 		for memrange in self.MemoryRanges:
-			t += memrange.to_bytes()
-		return t
+			memrange.to_buffer(buffer)
 	
 	@staticmethod
 	def parse(buff):
@@ -48,13 +44,9 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 		self.StartOfMemoryRange = None
 		self.DataSize = None
 
-	def get_size(self):
-		return 16
-
-	def to_bytes(self):
-		t = self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.DataSize.to_bytes(8, byteorder = 'little', signed = False)
-		return t
+	def to_buffer(self, buffer):
+		buffer.write(self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.DataSize.to_bytes(8, byteorder = 'little', signed = False))
 		
 	@staticmethod
 	def parse(buff):

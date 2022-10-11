@@ -1,9 +1,9 @@
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680383(v=vs.85).aspx	
 class MINIDUMP_LOCATION_DESCRIPTOR:
-	def __init__(self):
-		self.DataSize = None
-		self.Rva = None
+	def __init__(self, DataSize = 0, Rva = 0):
+		self.DataSize = DataSize
+		self.Rva = Rva
 
 	def get_size(self):
 		return 8
@@ -35,8 +35,8 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		
 class MINIDUMP_LOCATION_DESCRIPTOR64:
 	def __init__(self):
-		self.DataSize = None
-		self.Rva = None
+		self.DataSize = 0
+		self.Rva = 0
 
 	def get_size(self):
 		return 16
@@ -58,10 +58,20 @@ class MINIDUMP_LOCATION_DESCRIPTOR64:
 		return t
 		
 class MINIDUMP_STRING:
-	def __init__(self):
+	def __init__(self, data = None, encoding = 'utf-16-le'):
 		self.Length = None
 		self.Buffer = None
+		self.encoding = encoding
+		if data is not None:
+			self.Buffer = data.encode(self.encoding) + b"\x00\x00"
+			self.Length = len(self.Buffer) + 2
+
 	
+	def to_bytes(self):
+		t = self.Length.to_bytes(4, byteorder = 'little', signed = False)
+		t += self.Buffer
+		return t
+
 	@staticmethod
 	def parse(buff):
 		ms = MINIDUMP_STRING()
@@ -83,6 +93,7 @@ class MINIDUMP_STRING:
 		buff.seek(rva, 0)
 		ms = MINIDUMP_STRING.parse(buff)
 		buff.seek(pos, 0)
+
 		return ms.Buffer.decode('utf-16-le')
 	
 	@staticmethod
@@ -272,42 +283,42 @@ def hexdump( src, length=16, sep='.', start = 0):
 
 	@note Full support for python2 and python3 !
 	'''
-	result = [];
+	result = []
 
 	# Python3 support
 	try:
-		xrange(0,1);
+		xrange(0,1)
 	except NameError:
-		xrange = range;
+		xrange = range
 
 	for i in xrange(0, len(src), length):
-		subSrc = src[i:i+length];
-		hexa = '';
-		isMiddle = False;
+		subSrc = src[i:i+length]
+		hexa = ''
+		isMiddle = False
 		for h in xrange(0,len(subSrc)):
 			if h == length/2:
-				hexa += ' ';
-			h = subSrc[h];
+				hexa += ' '
+			h = subSrc[h]
 			if not isinstance(h, int):
-				h = ord(h);
-			h = hex(h).replace('0x','');
+				h = ord(h)
+			h = hex(h).replace('0x','')
 			if len(h) == 1:
-				h = '0'+h;
-			hexa += h+' ';
-		hexa = hexa.strip(' ');
-		text = '';
+				h = '0'+h
+			hexa += h+' '
+		hexa = hexa.strip(' ')
+		text = ''
 		for c in subSrc:
 			if not isinstance(c, int):
-				c = ord(c);
+				c = ord(c)
 			if 0x20 <= c < 0x7F:
-				text += chr(c);
+				text += chr(c)
 			else:
-				text += sep;
+				text += sep
 		if start == 0:
-			result.append(('%08x:  %-'+str(length*(2+1)+1)+'s  |%s|') % (i, hexa, text));
+			result.append(('%08x:  %-'+str(length*(2+1)+1)+'s  |%s|') % (i, hexa, text))
 		else:
-			result.append(('%08x(+%04x):  %-'+str(length*(2+1)+1)+'s  |%s|') % (start+i, i, hexa, text));
-	return '\n'.join(result);
+			result.append(('%08x(+%04x):  %-'+str(length*(2+1)+1)+'s  |%s|') % (start+i, i, hexa, text))
+	return '\n'.join(result)
 	
 def construct_table(lines, separate_head=True):
 	"""Prints a formatted table given a 2 dimensional array"""

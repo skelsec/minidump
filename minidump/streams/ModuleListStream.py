@@ -28,7 +28,11 @@ class MinidumpModule:
 		mm.size = mod.SizeOfImage
 		mm.checksum = mod.CheckSum
 		mm.timestamp = mod.TimeDateStamp
-		mm.name = MINIDUMP_STRING.get_from_rva(mod.ModuleNameRva, buff)
+		try:
+			mm.name = MINIDUMP_STRING.get_from_rva(mod.ModuleNameRva, buff)
+		except:
+			print('high: %s' % hex(mod.ModuleNameRva))
+			raise
 		mm.versioninfo = mod.VersionInfo
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
@@ -92,7 +96,8 @@ class VS_FIXEDFILEINFO:
 		self.dwFileDateMS = None
 		self.dwFileDateLS = None
 
-	def get_size(self):
+	@staticmethod
+	def get_size():
 		return 13*4
 
 	def to_bytes(self):
@@ -156,24 +161,38 @@ class MINIDUMP_MODULE:
 		#for writer
 		self.ModuleName = None
 
-	def get_size(self):
-		return 8+4+4+4+4+8+8+VS_FIXEDFILEINFO().get_size() + 2 * MINIDUMP_LOCATION_DESCRIPTOR().get_size()
-
-	def to_bytes(self):
-		t = self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.CheckSum.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.ModuleNameRva.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.VersionInfo.to_bytes()
-		t += self.CvRecord.to_bytes()
-		t += self.MiscRecord.to_bytes()
-		t += self.Reserved0.to_bytes(8, byteorder = 'little', signed = False)
-		t += self.Reserved1.to_bytes(8, byteorder = 'little', signed = False)
-		return t
+	def to_buffer(self, buffer):
+		#beware: MINIDUMP_LOCATION_DESCRIPTOR is used here regardless that sometimes data might be stored above 4GB. FIXME
+		pos1 = buffer.tell()
+		buffer.write(self.BaseOfImage.to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.SizeOfImage.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.CheckSum.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write_rva(MINIDUMP_STRING(self.ModuleName).to_bytes())
 		
+		if self.VersionInfo is not None:
+			buffer.write(self.VersionInfo.to_bytes())
+		else:
+			buffer.write(b'\x00' * VS_FIXEDFILEINFO.get_size())
+		if self.CvRecord is not None:
+			buffer.write_ld(self.VersionInfo.to_bytes())
+		else:
+			buffer.write_ld(b'')
+		
+		if self.MiscRecord is not None:
+			buffer.write_ld(self.MiscRecord.to_bytes())
+		else:
+			buffer.write_ld(b'')
+		buffer.write(self.Reserved0.to_bytes(8, byteorder = 'little', signed = False))
+		buffer.write(self.Reserved1.to_bytes(8, byteorder = 'little', signed = False))
+
 	@staticmethod
 	def parse(buff):
+		p1 = buff.tell()
+		#print('MINIDUMP_MODULE')
+		#print(hex(p1))
+		#input(hexdump(buff.read(6*8+4*4)))
+		buff.seek(p1)
 		mm = MINIDUMP_MODULE()
 		mm.BaseOfImage = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mm.SizeOfImage = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
@@ -185,6 +204,7 @@ class MINIDUMP_MODULE:
 		mm.MiscRecord = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		mm.Reserved0 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mm.Reserved1 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
+		#print('RVA: %s' % hex(mm.ModuleNameRva))
 		return mm
 
 	def __str__(self):
@@ -199,14 +219,10 @@ class MINIDUMP_MODULE_LIST:
 		self.NumberOfModules = None
 		self.Modules = []
 
-	def get_size(self):
-		return 4 + len(self.Modules) * MINIDUMP_MODULE().get_size()
-
-	def to_bytes(self):
-		t = len(self.Modules).to_bytes(4, byteorder = 'little', signed = False)
+	def to_buffer(self, buffer):
+		buffer.write(len(self.Modules).to_bytes(4, byteorder = 'little', signed = False))
 		for module in self.Modules:
-			t += module.to_bytes()
-		return t
+			module.to_buffer(buffer)
 	
 	@staticmethod
 	def parse(buff):
@@ -225,6 +241,8 @@ class MinidumpModuleList:
 	def parse(dir, buff):
 		t = MinidumpModuleList()
 		buff.seek(dir.Location.Rva)
+		input('ds %s' % dir.Location.DataSize)
+		input('rva %s' % hex(dir.Location.Rva))
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 		mtl = MINIDUMP_MODULE_LIST.parse(chunk)
 		for mod in mtl.Modules:

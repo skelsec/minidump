@@ -69,7 +69,7 @@ class MINIDUMP_SYSTEM_INFO:
 		self.ProcessorArchitecture = None
 		self.ProcessorLevel = None
 		self.ProcessorRevision = None
-		self.Reserved0 = None
+		self.Reserved0 = 0
 		self.NumberOfProcessors = None
 		self.ProductType = None
 		self.MajorVersion = None
@@ -89,48 +89,37 @@ class MINIDUMP_SYSTEM_INFO:
 		#for wrtier
 		self.CSDVersion = None
 
-	def get_size(self):
-		# here we cannot tell upfront what the size will be :(
-		return len(self.to_bytes())
+	def to_buffer(self, buffer):
+		#buff => DirectoryBuffer
+		start = buffer.tell()
+		buffer.write(self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False))
+		#buffer.write(self.Reserved0.to_bytes(2, byteorder = 'little', signed = False)) ### RESERVED 0 in parsing there is no such thing :/// ???? 
+		buffer.write(self.NumberOfProcessors.to_bytes(1, byteorder = 'little', signed = False))
+		buffer.write(self.ProductType.value.to_bytes(1, byteorder = 'little', signed = False))
+		buffer.write(self.MajorVersion.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False))
+		buffer.write(self.PlatformId.to_bytes(4, byteorder = 'little', signed = False))
 
-	def to_bytes(self, data_buffer = None):
-		t = self.ProcessorArchitecture.value.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.ProcessorLevel.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.ProcessorRevision.to_bytes(2, byteorder = 'little', signed = False)
-		#missing filed here?
-		t += self.NumberOfProcessors.to_bytes(1, byteorder = 'little', signed = False)
-		t += self.ProductType.value.to_bytes(1, byteorder = 'little', signed = False)
-		t += self.MajorVersion.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.MinorVersion.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.BuildNumber.to_bytes(4, byteorder = 'little', signed = False)
-		t += self.PlatformId.to_bytes(4, byteorder = 'little', signed = False)
-		if data_buffer is None:
-			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
+		if self.CSDVersion is not None:
+			buffer.write_rva(self.CSDVersion.to_bytes())
 		else:
-			pos = data_buffer.tell()
-			data_buffer.write(100*b'\x00')
-			self.CSDVersionRva = data_buffer.tell()
-			data_buffer.write(self.CSDVersion.encode('ascii') + b'\x00')
-			pos_end = data_buffer.tell()
-			data_buffer.seek(pos,0)
-			t += self.CSDVersionRva.to_bytes(4, byteorder = 'little', signed = False)
-		#missing filed here?
-		t += self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False)
-		t += self.Reserved2.to_bytes(2, byteorder = 'little', signed = False)
+			buffer.write(b'\x00'*4)
+		buffer.write(self.SuiteMask.to_bytes(2, byteorder = 'little', signed = False))
+		buffer.write(self.Reserved2.to_bytes(2, byteorder = 'little', signed = False))
+		#32
 		if self.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
 			for vid in self.VendorId:
-				t += vid.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.VersionInformation.value.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.FeatureInformation.value.to_bytes(4, byteorder = 'little', signed = False)
-			t += self.AMDExtendedCpuFeatures.value.to_bytes(4, byteorder = 'little', signed = False)
+				buffer.write(vid.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.VersionInformation.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.FeatureInformation.to_bytes(4, byteorder = 'little', signed = False))
+			buffer.write(self.AMDExtendedCpuFeatures.to_bytes(4, byteorder = 'little', signed = False))
 		else:
 			for pf in self.ProcessorFeatures:
 				t += pf.to_bytes(8, byteorder = 'little', signed = False)
 
-		if data_buffer is None:
-			return t
-		else:
-			data_buffer.write(t)
 
 	@staticmethod
 	def parse(buff):
@@ -226,7 +215,10 @@ class MinidumpSystemInfo:
 		t = MinidumpSystemInfo()
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
+		print(hexdump(chunk.read()))
+		chunk.seek(0,0)
 		si = MINIDUMP_SYSTEM_INFO.parse(chunk)
+		print(str)
 		t.ProcessorArchitecture = si.ProcessorArchitecture
 		t.ProcessorLevel = si.ProcessorLevel
 		t.ProcessorRevision = si.ProcessorRevision
@@ -236,7 +228,8 @@ class MinidumpSystemInfo:
 		t.MinorVersion = si.MinorVersion
 		t.BuildNumber = si.BuildNumber
 		t.PlatformId = si.PlatformId
-		t.CSDVersion = MINIDUMP_STRING.get_from_rva(si.CSDVersionRva, buff)
+		if si.CSDVersionRva != 0:
+			t.CSDVersion = MINIDUMP_STRING.get_from_rva(si.CSDVersionRva, buff)
 		t.SuiteMask = si.SuiteMask
 		t.VendorId = si.VendorId
 		t.VersionInformation = si.VersionInformation
