@@ -30,7 +30,7 @@ class AMinidumpBufferedMemorySegment:
 		self.chunks = []
 
 	def inrange(self, position):
-		return self.start_address <= position <= self.end_address
+		return self.start_address <= position < self.end_address
 
 	def remaining_len(self, position):
 		if not self.inrange(position):
