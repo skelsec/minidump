@@ -83,7 +83,10 @@ class MINIDUMP_STRING:
 		buff.seek(rva, 0)
 		ms = MINIDUMP_STRING.parse(buff)
 		buff.seek(pos, 0)
-		return ms.Buffer.decode('utf-16-le')
+		try:
+			return ms.Buffer.decode('utf-16-le')
+		except:
+			return '<STRING_DECODE_FAILED>'
 	
 	@staticmethod
 	async def aget_from_rva(rva, buff):
@@ -91,7 +94,10 @@ class MINIDUMP_STRING:
 		await buff.seek(rva, 0)
 		ms = await MINIDUMP_STRING.aparse(buff)
 		await buff.seek(pos, 0)
-		return ms.Buffer.decode('utf-16-le')
+		try:
+			return ms.Buffer.decode('utf-16-le')
+		except:
+			return '<STRING_DECODE_FAILED>'
 		
 class MinidumpMemorySegment:
 	def __init__(self):
