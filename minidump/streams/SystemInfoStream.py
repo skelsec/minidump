@@ -9,6 +9,48 @@ import enum
 import logging
 from minidump.common_structs import *
 
+MINIDUMP_WIN_BUILDNO_TO_VERSION = {
+	103: 'Windows 3.1',
+	102: 'Windows 3.1 - Sparta',
+	528: 'Windiws NT 3.1',
+	300: 'Windows NT 3.11 - Snowball',
+	153: 'Windows 3.2',
+	807: 'Windows NT 3.5',
+	1057: 'Windows NT 3.51',
+	1381: 'Windows NT 4.0',
+	950: 'Windows 95',
+	1998 : 'Windows 98',
+	2222: 'Windows 98 SE',
+	2195: 'Windows 2000',
+	3000: 'Windows ME',
+	2600: 'Windows XP',
+	2700: 'Windows XP - Media Center Edition 2005',
+	2710: 'Windows XP - Media Center Edition 2005 Update Rollup 2',
+	3790: 'Windows XP x64 / Server 2003 / Server 2003 R2',
+	6002: 'Windows Vista / Server 2008',
+	7601: 'Windows 7 / Server 2008 R2',
+	9200: 'Windows 8 / Server 2012',
+	9600: 'Windows 8.1 / Server 2012 R2',
+	10240: 'Windows 10 - 1507',
+	10586: 'Windows 10 - 1511',
+	14393: 'Windows 10 - 1607 / Server 2016',
+	15063: 'Windows 10 - 1703',
+	16299: 'Windows 10 - 1709 / Server 2016',
+	17134: 'Windows 10 - 1803 / Server 2016',
+	17763: 'Windows 10 - 1809 / Server 2019',
+	18362: 'Windows 10 - 1903 / Server 2019',
+	18363: 'Windows 10 - 1909 / Server 2019',
+	19041: 'Windows 10 - 2004 / Server 2019',
+	19042: 'Windows 10 - 20H2 / Server 2019',
+	19043: 'Windows 10 - 21H1',
+	19044: 'Windows 10 - 21H2',
+	19045: 'Windows 10 - 22H2',
+	22000: 'Windows 11 - 21H2',
+	20348: 'Windows Server 2022',
+	22621: 'Windows 11 - 22H2',
+}
+
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PROCESSOR_ARCHITECTURE(enum.Enum):
 	AMD64 = 9 #x64 (AMD or Intel)
@@ -191,7 +233,9 @@ class MinidumpSystemInfo:
 		self.OperatingSystem = None
 
 	def guess_os(self):
-		if self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType == PRODUCT_TYPE.VER_NT_WORKSTATION:
+		if self.BuildNumber in MINIDUMP_WIN_BUILDNO_TO_VERSION:
+			self.OperatingSystem = MINIDUMP_WIN_BUILDNO_TO_VERSION[self.BuildNumber]
+		elif self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType == PRODUCT_TYPE.VER_NT_WORKSTATION:
 			self.OperatingSystem = "Windows 10"
 		elif self.MajorVersion == 10 and self.MinorVersion == 0 and self.ProductType != self.ProductType.VER_NT_WORKSTATION:
 			self.OperatingSystem =  "Windows Server 2016 Technical Preview"
