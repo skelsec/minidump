@@ -26,10 +26,17 @@ class MINIDUMP_MEMORY64_LIST:
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MEMORY64_LIST()
+		buffsize = len(buff.read())
+		buff.seek(-buffsize, io.SEEK_CUR)
 		mml.NumberOfMemoryRanges = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mml.BaseRva = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		for _ in range(mml.NumberOfMemoryRanges):
 			mml.MemoryRanges.append(MINIDUMP_MEMORY_DESCRIPTOR64.parse(buff))
+			
+			#sometimes buggy minidumps have a wrong number of memory ranges, so we need to check if we reached the end of the buffer
+			curpos = buff.tell()
+			if curpos == buffsize:
+				break
 		
 		return mml
 		
