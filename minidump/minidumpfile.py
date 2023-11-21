@@ -227,14 +227,14 @@ class MinidumpFile:
 		t += str(self.sysinfo)
 		for dir in self.directories:
 			t += str(dir) + '\n'
-		for mod in self.modules:
+		for mod in self.modules.modules:
 			t += str(mod) + '\n'
 		if self.memory_segments is not None:
-			for segment in self.memory_segments:
+			for segment in self.memory_segments.memory_segments:
 				t+= str(segment) + '\n'
 
 		if self.memory_segments_64 is not None:
-			for segment in self.memory_segments_64:
+			for segment in self.memory_segments_64.memory_segments:
 				t+= str(segment) + '\n'
 
 		return t
