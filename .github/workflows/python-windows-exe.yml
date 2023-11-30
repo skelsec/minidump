@@ -8,7 +8,7 @@ name: Build Windows Executable - PyInstaller
 on:
   push:
     branches:
-      - master # Trigger on push to master branch
+      - main # Trigger on push to master branch
 
 jobs:
   build:
@@ -30,13 +30,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.9'
-    
-    - name: Determine Version
-      id: version
-      run: |
-        $VERSION = python -c "import sys; sys.path.append('${{ github.event.repository.name }}'); import _version; print(_version.__version__)"
-        echo "PROJVERSION=$VERSION" >> $GITHUB_STATE
-      shell: powershell
 
     - name: Install Dependencies
       run: |
@@ -48,13 +41,15 @@ jobs:
 
     - name: Compress executables
       run: |
-        "C:\Program Files\7-Zip\7z.exe a secure.7z builder\pyinstaller\*.exe -pprotected"
+        "C:\Program Files\7-Zip\7z.exe" a secure.7z *.exe -pprotected
+      working-directory: ${{ github.workspace }}/builder/pyinstaller
+      shell: cmd
     
-    - name: Upload Executable
-      uses: actions/upload-artifact@v2
-      with:
-        name: executable
-        path: builder\pyinstaller\*.exe
+    #- name: Upload Executable
+    #  uses: actions/upload-artifact@v2
+    #  with:
+    #    name: executable
+    #    path: builder\pyinstaller\*.exe
         
     - name: 'Set up Cloud SDK'
       uses: 'google-github-actions/setup-gcloud@v1'
@@ -63,4 +58,8 @@ jobs:
 
     - name: Upload Executables to GCS
       run: |
-        gsutil cp builder\pyinstaller\*.exe gs://skelsec-github-foss/${{ github.event.repository.name }}/${{ github.core.saveState.PROJVERSION }}/
+        $PROJVERSION = python -c "import sys; sys.path.append('${{ github.event.repository.name }}'); import _version; print(_version.__version__)"
+        Write-Host "Detected Version: $PROJVERSION"
+        gsutil cp builder\pyinstaller\*.exe gs://skelsec-github-foss/${{ github.event.repository.name }}/$PROJVERSION/
+        gsutil cp builder\pyinstaller\*.7z gs://skelsec-github-foss/${{ github.event.repository.name }}/$PROJVERSION/
+      shell: powershell
