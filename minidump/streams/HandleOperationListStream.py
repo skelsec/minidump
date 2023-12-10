@@ -9,7 +9,7 @@ class MINIDUMP_HANDLE_OPERATION_LIST:
 		self.SizeOfEntry = None
 		self.NumberOfEntries = None
 		self.Reserved = None
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		mhds = MINIDUMP_HANDLE_OPERATION_LIST()
@@ -17,6 +17,5 @@ class MINIDUMP_HANDLE_OPERATION_LIST:
 		mhds.SizeOfEntry = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.NumberOfEntries = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.Reserved = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-			
+
 		return mhds
-		

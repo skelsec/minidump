@@ -16,7 +16,7 @@ class VirtualSegment:
 		self.start_file_address = start_file_address
 
 		self.data = None
-	
+
 	def inrange(self, start, end):
 		return self.start <= start and end<= self.end
 
@@ -45,11 +45,11 @@ class AMinidumpBufferedMemorySegment:
 		if end is None:
 			await file_handle.seek(self.start_file_address + start)
 			return await file_handle.read(self.end_address - (self.start_file_address + start))
-		
+
 		for chunk in self.chunks:
 			if chunk.inrange(start, end):
 				return chunk.data[start - chunk.start: end - chunk.start]
-		
+
 		if self.total_size <= 2*self.chunksize:
 			chunksize = self.total_size
 			vs = VirtualSegment(0, chunksize, self.start_file_address)
@@ -61,12 +61,12 @@ class AMinidumpBufferedMemorySegment:
 		chunksize = max((end-start), self.chunksize)
 		if start + chunksize > self.end_address:
 			chunksize = self.end_address - start
-		
+
 		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
 		await file_handle.seek(vs.start_file_address)
 		vs.data = await file_handle.read(chunksize)
 		self.chunks.append(vs)
-		
+
 		return vs.data[start - vs.start: end - vs.start]
 
 class AMinidumpBufferedReader:
@@ -157,7 +157,7 @@ class AMinidumpBufferedReader:
 		Returns up to length bytes from the current memory segment
 		"""
 		t = self.current_position + length
-		if not self.current_segment.inrange(t):
+		if not self.current_segment.inrange(t - 1):
 			raise Exception('Would read over segment boundaries!')
 		return await self.current_segment.read(self.reader.file_handle, self.current_position - self.current_segment.start_address , t - self.current_segment.start_address)
 
@@ -177,7 +177,7 @@ class AMinidumpBufferedReader:
 			return await self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, None)
 
 		t = self.current_position + size
-		if not self.current_segment.inrange(t):
+		if not self.current_segment.inrange(t - 1):
 			raise Exception('Would read over segment boundaries!')
 
 		old_new_pos = self.current_position

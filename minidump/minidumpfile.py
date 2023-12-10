@@ -84,7 +84,7 @@ class MinidumpFile:
 		for i in range(0, self.header.NumberOfStreams):
 			self.file_handle.seek(self.header.StreamDirectoryRva + i * 12, 0 )
 			minidump_dir = MINIDUMP_DIRECTORY.parse(self.file_handle)
-			
+
 			if minidump_dir:
 				self.directories.append(minidump_dir)
 			else:
@@ -202,7 +202,7 @@ class MinidumpFile:
 			"""
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.HandleOperationListStream:
 			elif dir.StreamType == MINIDUMP_STREAM_TYPE.LastReservedStream:
-			
+
 			"""
 		try:
 			self.__parse_thread_context()
@@ -219,7 +219,7 @@ class MinidumpFile:
 				thread.ContextObject = CONTEXT.parse(self.file_handle)
 			elif self.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.INTEL:
 				thread.ContextObject = WOW64_CONTEXT.parse(self.file_handle)
-			
+
 
 	def __str__(self):
 		t = '== Minidump File ==\n'

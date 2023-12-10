@@ -38,17 +38,17 @@ class NEON128(M128A):
 # https://www.vergiliusproject.com/kernels/x64/Windows%20Vista%20%7C%202008/SP2/_XMM_SAVE_AREA32
 class XMM_SAVE_AREA32:
     def __init__(self):
-        self.ControlWord = 0                               # 0x0 USHORT 
-        self.StatusWord = 0                                # 0x2 USHORT 
-        self.TagWord = 0                                   # 0x4 UCHAR 
-        self.Reserved1 = 0                                 # 0x5 UCHAR 
+        self.ControlWord = 0                               # 0x0 USHORT
+        self.StatusWord = 0                                # 0x2 USHORT
+        self.TagWord = 0                                   # 0x4 UCHAR
+        self.Reserved1 = 0                                 # 0x5 UCHAR
         self.ErrorOpcode = 0                               # 0x6 USHORT
         self.ErrorOffset = 0                               # 0x8 ULONG
-        self.ErrorSelector = 0                             # 0xc USHORT 
-        self.Reserved2 = 0                                 # 0xe USHORT 
+        self.ErrorSelector = 0                             # 0xc USHORT
+        self.Reserved2 = 0                                 # 0xe USHORT
         self.DataOffset = 0                                # 0x10 ULONG
-        self.DataSelector = 0                              # 0x14 USHORT 
-        self.Reserved3 = 0                                 # 0x16 USHORT 
+        self.DataSelector = 0                              # 0x14 USHORT
+        self.Reserved3 = 0                                 # 0x16 USHORT
         self.MxCsr = 0                                     # 0x18 ULONG
         self.MxCsr_Mask = 0                                # 0x1c ULONG
         self.FloatRegisters = []                           # 0x20 struct M128A[8]
@@ -128,7 +128,7 @@ class CTX_DUMMYSTRUCTNAME:
         self.Xmm13 = 0
         self.Xmm14 = 0
         self.Xmm15 = 0
-    
+
     @classmethod
     def parse(cls, buff):
         dsn = cls()
@@ -189,7 +189,7 @@ class CTX_DUMMYUNIONNAME:
         self.D = []                        # ULONGLONG [32]
         self.DUMMYSTRUCTNAME = []
         self.S = []                        # DWORD [32]
-    
+
     @classmethod
     def parse(cls, buff):
         dun = cls()
@@ -221,7 +221,7 @@ class CTX_DUMMYUNIONNAME:
             s += "\t%d" % (e)
 
         return s
-        
+
 
 # https:# docs.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-context
 class CONTEXT:
@@ -265,7 +265,7 @@ class CONTEXT:
         self.R15 = 0   # DWORD64
         self.Rip = 0   # DWORD64
         self.DUMMYUNIONNAME = None
-        
+
         self.VectorRegister = []         # M128A   [26]
         self.VectorControl = 0           # DWORD64
         self.DebugControl = 0            # DWORD64
@@ -277,7 +277,7 @@ class CONTEXT:
     @classmethod
     def parse(cls, buff):
         ctx = cls()
-        
+
         ctx.P1Home = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)   # DWORD64
         ctx.P2Home = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)   # DWORD64
         ctx.P3Home = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)   # DWORD64
@@ -317,7 +317,7 @@ class CONTEXT:
         ctx.R15 = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)   # DWORD64
         ctx.Rip = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)   # DWORD64
         ctx.DUMMYUNIONNAME = CTX_DUMMYUNIONNAME.parse(buff)
-        
+
         ctx.VectorRegister = M128A.parse_array(buff, 26)         # M128A   [26]
         ctx.VectorControl =  int.from_bytes(buff.read(8), byteorder = 'little', signed = False)       # DWORD64
         ctx.DebugControl = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)         # DWORD64
@@ -329,7 +329,7 @@ class CONTEXT:
         return ctx
 
     def __str__(self):
-        s = "" 
+        s = ""
         s += "%s: 0x%x (%d)\n" % ("P1Home",self.P1Home,self.P1Home)
         s += "%s: 0x%x (%d)\n" % ("P2Home",self.P2Home,self.P2Home)
         s += "%s: 0x%x (%d)\n" % ("P3Home",self.P3Home,self.P3Home)
@@ -386,7 +386,7 @@ class WOW64_FLOATING_SAVE_AREA:
         self.DataSelector = 0 # DWORD
         self.RegisterArea = []  # BYTE
         self.Cr0NpxState = 0  # DWORD
-    
+
     @classmethod
     def parse(cls, buff):
         ctx = cls()
@@ -400,7 +400,7 @@ class WOW64_FLOATING_SAVE_AREA:
         ctx.RegisterArea = int.from_bytes(buff.read(80), byteorder = 'little', signed = False)
         ctx.Cr0NpxState = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
         return ctx
-        
+
     def __str__(self):
         s = ''
         s += "ControlWord: %x (%d)\n" % (self.ControlWord, self.ControlWord)

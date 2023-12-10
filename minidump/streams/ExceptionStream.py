@@ -7,7 +7,7 @@
 
 import io
 import enum
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680368(v=vs.85).aspx
 class MINIDUMP_EXCEPTION_STREAM:
@@ -16,7 +16,7 @@ class MINIDUMP_EXCEPTION_STREAM:
 		self.alignment = None
 		self.ExceptionRecord = None
 		self.ThreadContext = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mes = MINIDUMP_EXCEPTION_STREAM()
@@ -33,14 +33,14 @@ class MINIDUMP_EXCEPTION_STREAM:
 		t += 'ExceptionRecord:\n %s\n' % str(self.ExceptionRecord)
 		t += 'ThreadContext: %s\n' % str(self.ThreadContext)
 		return t
-	
+
 	@staticmethod
 	def get_header():
 		return [
 			'ThreadId',
 			*MINIDUMP_EXCEPTION.get_header()
 		]
-		
+
 
 	def to_row(self):
 		return [
@@ -48,7 +48,7 @@ class MINIDUMP_EXCEPTION_STREAM:
 			*self.ExceptionRecord.to_row()
 		]
 
-		
+
 class ExceptionCode(enum.Enum):
 	# Not a real exception code, it's just a placeholder to prevent the parser from raising an error
 	EXCEPTION_UNKNOWN               = 'EXCEPTION_UNKNOWN_CHECK_RAW'
@@ -107,7 +107,7 @@ class ExceptionCode(enum.Enum):
 	EXCEPTION_PRIV_INSTRUCTION 		= 0xC0000096	# The thread tried to execute an instruction whose operation is not allowed in the current machine mode.
 	EXCEPTION_SINGLE_STEP 			= 0x80000004	# A trace trap or other single-instruction mechanism signaled that one instruction has been executed.
 	EXCEPTION_STACK_OVERFLOW 		= 0xC00000FD	# The thread used up its stack.
-		
+
 #https://msdn.microsoft.com/en-us/library/windows/desktop/ms680367(v=vs.85).aspx
 class MINIDUMP_EXCEPTION:
 	def __init__(self):
@@ -119,7 +119,7 @@ class MINIDUMP_EXCEPTION:
 		self.__unusedAlignment = None
 		self.ExceptionInformation = []
 		self.ExceptionCode_raw = None
-	
+
 	@staticmethod
 	def parse(buff):
 		me = MINIDUMP_EXCEPTION()
@@ -136,13 +136,13 @@ class MINIDUMP_EXCEPTION:
 		me.__unusedAlignment = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		for _ in range(me.NumberParameters):
 			me.ExceptionInformation.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
-			
+
 		return me
 
 	def __str__(self):
 		t  = '== MINIDUExceptionInformationMP_EXCEPTION ==\n'
-		t += "ExceptionCode : %s\n" % self.ExceptionCode 
-		t += "ExceptionFlags : %s\n" % self.ExceptionFlags 
+		t += "ExceptionCode : %s\n" % self.ExceptionCode
+		t += "ExceptionFlags : %s\n" % self.ExceptionFlags
 		t += "ExceptionRecord : %s\n" % self.ExceptionRecord
 		t += "ExceptionAddress : 0x%x\n" % self.ExceptionAddress
 		t += "NumberParameters : %s\n" % self.NumberParameters
@@ -159,7 +159,7 @@ class MINIDUMP_EXCEPTION:
 			'ExceptionAddress',
 			'ExceptionInformation'
 		]
-		
+
 
 	def to_row(self):
 		return [
@@ -174,11 +174,11 @@ class MINIDUMP_EXCEPTION:
 class ExceptionList:
 	def __init__(self):
 		self.exception_records = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = ExceptionList()
-	
+
 		buff.seek(dir.Location.Rva)
 		chunk = io.BytesIO(buff.read(dir.Location.DataSize))
 
@@ -197,13 +197,13 @@ class ExceptionList:
 				break
 
 			t.exception_records.append(mes)
-			
+
 		return t
 
 	@staticmethod
 	async def aparse(dir, buff):
 		t = ExceptionList()
-	
+
 		await buff.seek(dir.Location.Rva)
 		chunk_data = await buff.read(dir.Location.DataSize)
 		chunk = io.BytesIO(chunk_data)
@@ -223,9 +223,9 @@ class ExceptionList:
 				break
 
 			t.exception_records.append(mes)
-			
+
 		return t
-	
+
 	def to_table(self):
 		t = []
 		t.append(MINIDUMP_EXCEPTION_STREAM.get_header())
@@ -235,4 +235,3 @@ class ExceptionList:
 
 	def __str__(self):
 		return '== ExceptionList ==\n' + construct_table(self.to_table())
-	

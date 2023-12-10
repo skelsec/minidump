@@ -4,7 +4,7 @@
 #  Tamas Jos (@skelsec)
 #
 import io
-from minidump.common_structs import * 
+from minidump.common_structs import *
 from minidump.streams.MemoryListStream import MINIDUMP_MEMORY_DESCRIPTOR
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680515(v=vs.85).aspx
@@ -18,7 +18,7 @@ class MINIDUMP_THREAD_LIST:
 		for th in self.Threads:
 			t += th.to_bytes()
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mtl = MINIDUMP_THREAD_LIST()
@@ -26,8 +26,8 @@ class MINIDUMP_THREAD_LIST:
 		for _ in range(mtl.NumberOfThreads):
 			mtl.Threads.append(MINIDUMP_THREAD.parse(buff))
 		return mtl
-	
-# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680517(v=vs.85).aspx	
+
+# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680517(v=vs.85).aspx
 class MINIDUMP_THREAD:
 	def __init__(self):
 		self.ThreadId = None
@@ -47,7 +47,7 @@ class MINIDUMP_THREAD:
 		t += self.Stack.to_bytes()
 		t += self.ThreadContext.to_bytes()
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mt = MINIDUMP_THREAD()
@@ -58,9 +58,9 @@ class MINIDUMP_THREAD:
 		mt.Teb = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mt.Stack = MINIDUMP_MEMORY_DESCRIPTOR.parse(buff)
 		mt.ThreadContext = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
-		
+
 		return mt
-	
+
 	@staticmethod
 	def get_header():
 		return [
@@ -72,7 +72,7 @@ class MINIDUMP_THREAD:
 			#'Stack',
 			#'ThreadContext',
 		]
-	
+
 	def to_row(self):
 		return [
 			hex(self.ThreadId),
@@ -83,11 +83,11 @@ class MINIDUMP_THREAD:
 			#self.Stack,
 			#self.ThreadContext,
 		]
-		
+
 class MinidumpThreadList:
 	def __init__(self):
 		self.threads = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpThreadList()
@@ -106,13 +106,13 @@ class MinidumpThreadList:
 		mtl = MINIDUMP_THREAD_LIST.parse(chunk)
 		t.threads = mtl.Threads
 		return t
-		
+
 	def to_table(self):
 		t = []
 		t.append(MINIDUMP_THREAD.get_header())
 		for thread in self.threads:
 			t.append(thread.to_row())
 		return t
-		
+
 	def __str__(self):
 		return 'ThreadList\n' + construct_table(self.to_table())

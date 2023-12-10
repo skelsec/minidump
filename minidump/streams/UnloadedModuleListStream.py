@@ -5,7 +5,7 @@
 #
 
 import io
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680521(v=vs.85).aspx
 class MINIDUMP_UNLOADED_MODULE_LIST:
@@ -19,7 +19,7 @@ class MINIDUMP_UNLOADED_MODULE_LIST:
 		t += self.SizeOfEntry.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.NumberOfEntries.to_bytes(4, byteorder = 'little', signed = False)
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		muml = MINIDUMP_UNLOADED_MODULE_LIST()
@@ -27,7 +27,7 @@ class MINIDUMP_UNLOADED_MODULE_LIST:
 		muml.SizeOfEntry = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		muml.NumberOfEntries = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		return muml
-	
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680523(v=vs.85).aspx
 class MINIDUMP_UNLOADED_MODULE:
 	def __init__(self):
@@ -44,7 +44,7 @@ class MINIDUMP_UNLOADED_MODULE:
 		t += self.TimeDateStamp.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.ModuleNameRva.to_bytes(4, byteorder = 'little', signed = False)
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mum = MINIDUMP_UNLOADED_MODULE()
@@ -62,10 +62,10 @@ class MinidumpUnloadedModule:
 		self.size = None
 		self.endaddress = None
 		self.memorysegments = [] #list of memory segments the module takes place in
-		
+
 		self.checksum = None
 		self.timestamp = None
-	
+
 	@staticmethod
 	def parse(mod, buff):
 		"""
@@ -95,14 +95,14 @@ class MinidumpUnloadedModule:
 		mm.name = await MINIDUMP_STRING.aget_from_rva(mod.ModuleNameRva, buff)
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
-		
+
 	def assign_memory_regions(self, segments):
 		for segment in segments:
 			if self.baseaddress <= segment.start_virtual_address < self.endaddress:
 				self.memorysegments.append(segment)
-		
+
 	def __str__(self):
-		return 'Unloaded Module name: %s Size: %s BaseAddress: %s' % (self.name, hex(self.size), hex(self.baseaddress))	
+		return 'Unloaded Module name: %s Size: %s BaseAddress: %s' % (self.name, hex(self.size), hex(self.baseaddress))
 
 	@staticmethod
 	def get_header():
@@ -112,7 +112,7 @@ class MinidumpUnloadedModule:
 			'Size',
 			'Endaddress',
 		]
-	
+
 	def to_row(self):
 		return [
 			str(self.name),
@@ -120,12 +120,12 @@ class MinidumpUnloadedModule:
 			hex(self.size),
 			'0x%08x' % self.endaddress,
 		]
-		
-	
+
+
 class MinidumpUnloadedModuleList:
 	def __init__(self):
 		self.modules = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpUnloadedModuleList()
@@ -135,7 +135,7 @@ class MinidumpUnloadedModuleList:
 		for _ in range(muml.NumberOfEntries):
 			mod = MINIDUMP_UNLOADED_MODULE.parse(chunk)
 			t.modules.append(MinidumpUnloadedModule.parse(mod, buff))
-		
+
 		return t
 
 	@staticmethod
@@ -149,16 +149,16 @@ class MinidumpUnloadedModuleList:
 			mod = MINIDUMP_UNLOADED_MODULE.parse(chunk)
 			dr = await MinidumpUnloadedModule.aparse(mod, buff)
 			t.modules.append(dr)
-		
+
 		return t
-		
+
 	def to_table(self):
 		t = []
 		t.append(MinidumpUnloadedModule.get_header())
 		for mod in self.modules:
 			t.append(mod.to_row())
 		return t
-		
+
 	def __str__(self):
 		t  = '== UnloadedModuleList ==\n' + construct_table(self.to_table())
 		return t

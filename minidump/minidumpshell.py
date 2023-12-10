@@ -109,7 +109,7 @@ class MinidumpShell(cmd.Cmd):
 		if x is None:
 			print('Reader not yet positioned! Issue a "move" command with the desired memory address!')
 		print(hex(x))
-	
+
 	def do_move(self, position):
 		"""Sets the current position in the process' virtual memory space"""
 		pos = args2int(position)
@@ -145,13 +145,13 @@ class MinidumpShell(cmd.Cmd):
 		data = self.reader.peek(count)
 		print(hexdump( data, length=self.hexdump_size, sep='.', start = pos_before))
 		self.update_prompt(None)
-	
+
 
 def main():
 	import argparse
 
 	parser = argparse.ArgumentParser(description='A parser for minidumnp files')
-	parser.add_argument('-f', '--minidumpfile', help='path to the minidump file of lsass.exe')	
+	parser.add_argument('-f', '--minidumpfile', help='path to the minidump file of lsass.exe')
 	args = parser.parse_args()
 
 	shell = MinidumpShell()

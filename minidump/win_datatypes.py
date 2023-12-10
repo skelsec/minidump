@@ -11,7 +11,7 @@ class POINTER:
 		self.location = reader.tell()
 		self.value = reader.read_uint()
 		self.finaltype = finaltype
-		
+
 	def read(self, reader, override_finaltype = None):
 		if self.value == 0:
 			return None
@@ -23,7 +23,7 @@ class POINTER:
 			data = self.finaltype(reader)
 		reader.move(pos)
 		return data
-	
+
 	def read_raw(self, reader, size ):
 		#we do not know the finaltype, just want the data
 		if self.value == 0:
@@ -33,23 +33,23 @@ class POINTER:
 		data = reader.read(size)
 		reader.move(pos)
 		return data
-		
+
 class PVOID(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, None) #with void we cannot determine the final type
-		
+
 class BOOL:
 	def __init__(self, reader):
 		self.value = bool(reader.read_uint())
-		
+
 class BOOLEAN:
 	def __init__(self, reader):
 		self.value = reader.read(1)
-		
+
 class BYTE:
 	def __init__(self, reader):
 		self.value = reader.read(1)
-		
+
 class PBYTE(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, BYTE)
@@ -57,52 +57,52 @@ class PBYTE(POINTER):
 class CCHAR:
 	def __init__(self, reader):
 		self.value = reader.read(1).decode('ascii')
-		
+
 class CHAR:
 	def __init__(self, reader):
 		self.value = reader.read(1).decode('ascii')
-		
+
 class UCHAR:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(1), byteorder = 'little', signed = False)
 
 class WORD:
 	def __init__(self, reader):
-		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = False)		
+		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = False)
 
 class DWORD:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
-		
+
 class DWORDLONG:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)
-		
+
 class DWORD_PTR(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, DWORD)
-		
+
 class DWORD32:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
 
 class DWORD64:
 	def __init__(self, reader):
-		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)		
+		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)
 
-	
+
 class HANDLE:
 	def __init__(self, reader):
 		self.value = reader.read_uint()
-		
+
 class HFILE:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
-		
+
 class HINSTANCE:
 	def __init__(self, reader):
-		self.value = reader.read_uint()		
-		
+		self.value = reader.read_uint()
+
 
 class HKEY:
 	def __init__(self, reader):
@@ -112,7 +112,7 @@ class HKEY:
 class HKL:
 	def __init__(self, reader):
 		self.value = reader.read_uint()
-		
+
 class HLOCAL:
 	def __init__(self, reader):
 		self.value = reader.read_uint()
@@ -180,7 +180,7 @@ class LPBYTE(POINTER):
 class ULONG:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
-		
+
 class ULONGLONG:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)
@@ -188,51 +188,50 @@ class ULONGLONG:
 class ULONG32:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(4), byteorder = 'little', signed = False)
-		
+
 class ULONG64:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(8), byteorder = 'little', signed = False)
-		
+
 class PWSTR(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, None)
-		
+
 class PCHAR(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, CHAR)
-		
+
 class USHORT:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = False)
-		
+
 class SHORT:
 	def __init__(self, reader):
 		self.value = int.from_bytes(reader.read(2), byteorder = 'little', signed = True)
-		
+
 #https://msdn.microsoft.com/en-us/library/windows/hardware/ff554296(v=vs.85).aspx
 class LIST_ENTRY:
 	def __init__(self, reader, finaltype = None):
 		self.Flink = POINTER(reader, finaltype)
 		self.Blink = POINTER(reader, finaltype)
-		
+
 class FILETIME:
 	def __init__(self, reader):
 		self.dwLowDateTime = DWORD(reader)
 		self.dwHighDateTime = DWORD(reader)
 		self.value = (self.dwHighDateTime.value << 32) + self.dwLowDateTime.value
-		
+
 class PUCHAR(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, UCHAR)
-		
+
 class PCWSTR(POINTER):
 	def __init__(self, reader):
 		super().__init__(reader, None)
-		
+
 class SIZE_T:
 	def __init__(self, reader):
 		self.value = reader.read_uint()
-		
-		
 
-		
+
+

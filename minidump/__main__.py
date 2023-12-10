@@ -30,7 +30,7 @@ def run():
 	parser.add_argument('--all', action='store_true', help='Show all info')
 	parser.add_argument('-r', '--read-addr', type=lambda x: int(x,0), help='Dump a memory region from the process\'s addres space')
 	parser.add_argument('-s', '--read-size', type=lambda x: int(x,0), default = 0x20, help='Dump a memory region from the process\'s addres space')
-	
+
 	args = parser.parse_args()
 	if args.verbose == 0:
 		logging.basicConfig(level=logging.INFO)
@@ -40,17 +40,17 @@ def run():
 		logging.basicConfig(level=1)
 
 	print(__banner__)
-	
+
 	if args.interactive:
 		shell = MinidumpShell()
 		shell.do_open(args.minidumpfile)
 		shell.cmdloop()
 
 	else:
-		
+
 		mf = MinidumpFile.parse(args.minidumpfile)
 		reader = mf.get_reader()
-		
+
 		if args.all or args.threads:
 			if mf.threads is not None:
 				print(str(mf.threads))
@@ -89,7 +89,7 @@ def run():
 				print(str(mf.misc_info))
 		if args.all or args.header:
 			print(str(mf.header))
-				
+
 		if args.read_addr:
 			buff_reader = reader.get_buffered_reader()
 			buff_reader.move(args.read_addr)

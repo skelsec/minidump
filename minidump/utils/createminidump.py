@@ -17,7 +17,7 @@ if platform.system() != 'Windows':
 # https://stackoverflow.com/questions/1405913/how-do-i-determine-if-my-python-shell-is-executing-in-32bit-or-64bit-mode-on-os
 IS_PYTHON_64 = False if (8 * struct.calcsize("P")) == 32 else True
 
-class MINIDUMP_TYPE(enum.IntFlag): 
+class MINIDUMP_TYPE(enum.IntFlag):
 	MiniDumpNormal						  = 0x00000000
 	MiniDumpWithDataSegs					= 0x00000001
 	MiniDumpWithFullMemory				  = 0x00000002
@@ -41,7 +41,7 @@ class MINIDUMP_TYPE(enum.IntFlag):
 	MiniDumpWithModuleHeaders			   = 0x00080000
 	MiniDumpFilterTriage					= 0x00100000
 	MiniDumpValidTypeFlags				  = 0x001fffff
-	
+
 class WindowsBuild(enum.Enum):
 	WIN_XP  = 2600
 	WIN_2K3 = 3790
@@ -53,7 +53,7 @@ class WindowsBuild(enum.Enum):
 	WIN_10_1511 = 10586
 	WIN_10_1607 = 14393
 	WIN_10_1707 = 15063
-	
+
 class WindowsMinBuild(enum.Enum):
 	WIN_XP = 2500
 	WIN_2K3 = 3000
@@ -62,9 +62,9 @@ class WindowsMinBuild(enum.Enum):
 	WIN_8 = 8000
 	WIN_BLUE = 9400
 	WIN_10 = 9800
-	
+
 #utter microsoft bullshit commencing..
-def getWindowsBuild():   
+def getWindowsBuild():
     class OSVersionInfo(ctypes.Structure):
         _fields_ = [
             ("dwOSVersionInfoSize" , ctypes.c_int),
@@ -76,9 +76,9 @@ def getWindowsBuild():
     GetVersionEx = getattr( ctypes.windll.kernel32 , "GetVersionExA")
     version  = OSVersionInfo()
     version.dwOSVersionInfoSize = ctypes.sizeof(OSVersionInfo)
-    GetVersionEx( ctypes.byref(version) )    
+    GetVersionEx( ctypes.byref(version) )
     return version.dwBuildNumber
-	
+
 DELETE = 0x00010000
 READ_CONTROL = 0x00020000
 WRITE_DAC = 0x00040000
@@ -93,7 +93,7 @@ if getWindowsBuild() >= WindowsMinBuild.WIN_VISTA.value:
 	PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFFF
 else:
 	PROCESS_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0xFFF
-	
+
 FILE_SHARE_READ = 1
 FILE_SHARE_WRITE = 2
 FILE_SHARE_DELETE = 4
@@ -133,7 +133,7 @@ class SECURITY_ATTRIBUTES(ctypes.Structure):
         ('p_security_descriptor', ctypes.wintypes.LPVOID),
         ('inherit_handle', ctypes.wintypes.BOOLEAN),
         )
-LPSECURITY_ATTRIBUTES = ctypes.POINTER(SECURITY_ATTRIBUTES)	
+LPSECURITY_ATTRIBUTES = ctypes.POINTER(SECURITY_ATTRIBUTES)
 """
 Psapi = windll.psapi
 GetProcessImageFileName = Psapi.GetProcessImageFileNameA
@@ -165,7 +165,7 @@ GetCurrentProcess.argtypes = ()
 GetCurrentProcess.restype = HANDLE
 
 # https://msdn.microsoft.com/en-us/library/ms684139.aspx
-IsWow64Process  = ctypes.windll.kernel32.IsWow64Process 
+IsWow64Process  = ctypes.windll.kernel32.IsWow64Process
 IsWow64Process.argtypes = (HANDLE, PBOOL)
 IsWow64Process.restype = BOOL
 
@@ -190,14 +190,14 @@ def is64bitProc(process_handle):
 		logging.warning('Failed to get process version info!')
 		WinError(get_last_error())
 	return not bool(is64.value)
-	
+
 # https://waitfordebug.wordpress.com/2012/01/27/pid-enumeration-on-windows-with-pure-python-ctypes/
 def enum_pids():
-	
+
 	max_array = c_ulong * 4096 # define long array to capture all the processes
 	pProcessIds = max_array() # array to store the list of processes
 	pBytesReturned = c_ulong() # the number of bytes returned in the array
-	#EnumProcess 
+	#EnumProcess
 	res = EnumProcesses(
 		ctypes.byref(pProcessIds),
 		ctypes.sizeof(pProcessIds),
@@ -206,22 +206,22 @@ def enum_pids():
 	if res == 0:
 		logging.error(WinError(get_last_error()))
 		return []
-  
+
 	# get the number of returned processes
 	nReturned = int(pBytesReturned.value/ctypes.sizeof(c_ulong()))
 	return [i for i in pProcessIds[:nReturned]]
-	
+
 #https://msdn.microsoft.com/en-us/library/windows/desktop/ms683217(v=vs.85).aspx
 def enum_process_names():
 	pid_to_name = {}
-	
+
 	for pid in enum_pids():
 		pid_to_name[pid] = 'Not found'
 		process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
 		if process_handle is None:
 			logging.debug('[Enum Processes]Failed to open process PID: %d Reason: %s ' % (pid, WinError(get_last_error())))
 			continue
-		
+
 		image_name = (ctypes.c_char*MAX_PATH)()
 		max_path = DWORD(4096)
 		#res = GetProcessImageFileName(process_handle, image_name, MAX_PATH)
@@ -229,7 +229,7 @@ def enum_process_names():
 		if res == 0:
 			logging.debug('[Enum Proceses]Failed GetProcessImageFileName on PID: %d Reason: %s ' % (pid, WinError(get_last_error())))
 			continue
-		
+
 		pid_to_name[pid] = image_name.value.decode()
 	return pid_to_name
 
@@ -239,7 +239,7 @@ def create_dump(pid, output_filename, mindumptype, with_debug = False):
 		assigned = enable_debug_privilege()
 		msg = ['failure', 'success'][assigned]
 		logging.debug('SeDebugPrivilege assignment %s' % msg)
-	
+
 	logging.debug('Opening process PID: %d' % pid)
 	process_handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
 	if process_handle is None:
@@ -250,7 +250,7 @@ def create_dump(pid, output_filename, mindumptype, with_debug = False):
 	is64 = is64bitProc(process_handle)
 	if is64 != IS_PYTHON_64:
 		logging.warning('process architecture mismatch! This could case error! Python arch: %s Target process arch: %s' % ('x86' if not IS_PYTHON_64 else 'x64', 'x86' if not is64 else 'x64'))
-	
+
 	logging.debug('Creating file handle for output file')
 	file_handle = CreateFile(output_filename, FILE_GENERIC_READ | FILE_GENERIC_WRITE, 0, None,  FILE_CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, None)
 	if file_handle == -1:
@@ -265,14 +265,14 @@ def create_dump(pid, output_filename, mindumptype, with_debug = False):
 	logging.info('Dump file created succsessfully')
 	CloseHandle(file_handle)
 	CloseHandle(process_handle)
-	
+
 def main():
 	import argparse
 
 	parser = argparse.ArgumentParser(description='Tool to create process dumps using windows API')
 	parser.add_argument('-d', '--with-debug', action='store_true', help='enable SeDebugPrivilege, use this if target process is not in the same user context as your script')
 	parser.add_argument('-v', '--verbose', action='count', default=0, help = 'verbosity, add more - see more')
-	
+
 	subparsers = parser.add_subparsers(help = 'commands')
 	subparsers.required = True
 	subparsers.dest = 'command'
@@ -282,24 +282,24 @@ def main():
 	target_group.add_argument('-p', '--pid', type=int, help='PID of process to dump')
 	target_group.add_argument('-n', '--name', help='Name of process to dump')
 	dump_group.add_argument('-o', '--outfile', help='Output .dmp file name', required = True)
-	
+
 	args = parser.parse_args()
-	
+
 	if args.verbose == 0:
 		logging.basicConfig(level=logging.INFO)
 	elif args.verbose == 1:
 		logging.basicConfig(level=logging.DEBUG)
 	else:
 		logging.basicConfig(level=1)
-		
+
 	mindumptype = MINIDUMP_TYPE.MiniDumpNormal | MINIDUMP_TYPE.MiniDumpWithFullMemory
-		
+
 	if args.with_debug:
 		logging.debug('Enabling SeDebugPrivilege')
 		assigned = enable_debug_privilege()
 		msg = ['failure', 'success'][assigned]
 		logging.debug('SeDebugPrivilege assignment %s' % msg)
-	
+
 	if args.command == 'enum':
 		pid_to_name = enum_process_names()
 		t = [p for p in pid_to_name]
@@ -307,12 +307,12 @@ def main():
 		for pid in t:
 			logging.info('PID: %d Name: %s' % (pid, pid_to_name[pid]))
 		return
-		
+
 	if args.command == 'dump':
 		if args.pid:
 			logging.info('Dumpig process PID %d' % args.pid)
 			create_dump(args.pid, args.outfile, mindumptype, with_debug = args.with_debug)
-		
+
 		if args.name:
 			pid_to_name = enum_process_names()
 			for pid in pid_to_name:
@@ -321,8 +321,7 @@ def main():
 					create_dump(pid, args.outfile, mindumptype, with_debug = args.with_debug)
 					return
 			logging.info('Failed to find process by name!')
-			
+
 if __name__=='__main__':
 	main()
 
-	

@@ -9,7 +9,7 @@ class CommentStreamA:
 
 	def to_bytes(self):
 		return self.data.encode('ascii')
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		csa = CommentStreamA()
@@ -24,6 +24,6 @@ class CommentStreamA:
 		csdata = await buff.read(dir.Location.DataSize)
 		csa.data = csdata.decode()
 		return csa
-	
+
 	def __str__(self):
 		return 'CommentA: %s' % self.data

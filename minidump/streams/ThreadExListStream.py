@@ -5,7 +5,7 @@
 #
 
 import io
-from minidump.common_structs import * 
+from minidump.common_structs import *
 from minidump.streams.MemoryListStream import MINIDUMP_MEMORY_DESCRIPTOR
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680399(v=vs.85).aspx
@@ -13,16 +13,16 @@ class MINIDUMP_THREAD_EX_LIST:
 	def __init__(self):
 		self.NumberOfThreads = None
 		self.Threads = []
-	
+
 	@staticmethod
 	def parse(buff):
 		mtel = MINIDUMP_THREAD_EX_LIST()
 		mtel.NumberOfThreads = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		for _ in range(mtel.NumberOfThreads):
 			mtel.Threads.append(MINIDUMP_THREAD_EX.parse(buff))
-		
+
 		return mtel
-		
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680400(v=vs.85).aspx
 class MINIDUMP_THREAD_EX:
 	def __init__(self):
@@ -34,7 +34,7 @@ class MINIDUMP_THREAD_EX:
 		self.Stack = None
 		self.ThreadContext = None
 		self.BackingStore = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mte = MINIDUMP_THREAD_EX()
@@ -47,7 +47,7 @@ class MINIDUMP_THREAD_EX:
 		mte.ThreadContext = MINIDUMP_LOCATION_DESCRIPTOR.parse(buff)
 		mte.BackingStore = MINIDUMP_MEMORY_DESCRIPTOR.parse(buff)
 		return mte
-	
+
 	@staticmethod
 	def get_header():
 		return [
@@ -59,7 +59,7 @@ class MINIDUMP_THREAD_EX:
 			#'Stack',
 			#'ThreadContext',
 		]
-	
+
 	def to_row(self):
 		return [
 			hex(self.ThreadId),
@@ -70,12 +70,12 @@ class MINIDUMP_THREAD_EX:
 			#self.Stack,
 			#self.ThreadContext,
 		]
-		
-		
+
+
 class MinidumpThreadExList:
 	def __init__(self):
 		self.threads = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpThreadExList()
@@ -94,14 +94,13 @@ class MinidumpThreadExList:
 		mtl = MINIDUMP_THREAD_EX_LIST.parse(chunk)
 		t.threads = mtl.Threads
 		return t
-	
+
 	def to_table(self):
 		t = []
 		t.append(MINIDUMP_THREAD_EX.get_header())
 		for thread in self.threads:
 			t.append(thread.to_row())
 		return t
-		
+
 	def __str__(self):
-		return '== ThreadExList ==\n' + construct_table(self.to_table())	
-	
+		return '== ThreadExList ==\n' + construct_table(self.to_table())
