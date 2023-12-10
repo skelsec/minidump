@@ -157,7 +157,7 @@ class AMinidumpBufferedReader:
 		Returns up to length bytes from the current memory segment
 		"""
 		t = self.current_position + length
-		if not self.current_segment.inrange(t):
+		if not self.current_segment.inrange(t - 1):
 			raise Exception('Would read over segment boundaries!')
 		return await self.current_segment.read(self.reader.file_handle, self.current_position - self.current_segment.start_address , t - self.current_segment.start_address)
 
@@ -177,7 +177,7 @@ class AMinidumpBufferedReader:
 			return await self.current_segment.read(self.reader.file_handle, old_new_pos - self.current_segment.start_address, None)
 
 		t = self.current_position + size
-		if not self.current_segment.inrange(t):
+		if not self.current_segment.inrange(t - 1):
 			raise Exception('Would read over segment boundaries!')
 
 		old_new_pos = self.current_position
