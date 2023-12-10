@@ -36,7 +36,7 @@ class MINIDUMP_DIRECTORY:
 
 	@staticmethod
 	async def aparse(buff):
-		
+
 		t = await buff.read(4)
 		raw_stream_type_value = int.from_bytes(t, byteorder = 'little', signed = False)
 

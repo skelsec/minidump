@@ -4,7 +4,7 @@
 #  Tamas Jos (@skelsec)
 #
 import io
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 class MinidumpModule:
 	def __init__(self):
@@ -12,11 +12,11 @@ class MinidumpModule:
 		self.baseaddress = None
 		self.size = None
 		self.endaddress = None
-		
+
 		self.versioninfo = None
 		self.checksum = None
 		self.timestamp = None
-		
+
 	@staticmethod
 	def parse(mod, buff):
 		"""
@@ -48,10 +48,10 @@ class MinidumpModule:
 		mm.versioninfo = mod.VersionInfo
 		mm.endaddress = mm.baseaddress + mm.size
 		return mm
-		
+
 	def inrange(self, memory_loc):
 		return self.baseaddress <= memory_loc < self.endaddress
-	
+
 	@staticmethod
 	def get_header():
 		return [
@@ -61,7 +61,7 @@ class MinidumpModule:
 			'Endaddress',
 			'Timestamp',
 		]
-	
+
 	def to_row(self):
 		return [
 			str(self.name),
@@ -70,11 +70,11 @@ class MinidumpModule:
 			'0x%08x' % self.endaddress,
 			'0x%08x' % self.timestamp,
 		]
-		
-		
+
+
 	def __str__(self):
 		return 'Module name: %s BaseAddress: 0x%08x Size: 0x%x Endaddress: 0x%08x' % (self.name, self.baseaddress, self.size, self.endaddress)
-		
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms646997(v=vs.85).aspx
 class VS_FIXEDFILEINFO:
 	def __init__(self):
@@ -110,7 +110,7 @@ class VS_FIXEDFILEINFO:
 		t += self.dwFileDateMS.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.dwFileDateLS.to_bytes(4, byteorder = 'little', signed = False)
 		return t
-	
+
 	@staticmethod
 	def from_bytes(data):
 		return VS_FIXEDFILEINFO.parse(io.BytesIO(data))
@@ -171,7 +171,7 @@ class MINIDUMP_MODULE:
 		t += self.Reserved0.to_bytes(8, byteorder = 'little', signed = False)
 		t += self.Reserved1.to_bytes(8, byteorder = 'little', signed = False)
 		return t
-		
+
 	@staticmethod
 	def parse(buff):
 		mm = MINIDUMP_MODULE()
@@ -192,7 +192,7 @@ class MINIDUMP_MODULE:
 		for k in self.__dict__:
 			t += '%s : %s\r\n' % (k, str(self.__dict__[k]))
 		return t
-  
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680391(v=vs.85).aspx
 class MINIDUMP_MODULE_LIST:
 	def __init__(self):
@@ -207,20 +207,20 @@ class MINIDUMP_MODULE_LIST:
 		for module in self.Modules:
 			t += module.to_bytes()
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MODULE_LIST()
 		mml.NumberOfModules = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		for _ in range(mml.NumberOfModules):
 			mml.Modules.append(MINIDUMP_MODULE.parse(buff))
-			
+
 		return mml
-		
+
 class MinidumpModuleList:
 	def __init__(self):
 		self.modules = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpModuleList()
@@ -230,7 +230,7 @@ class MinidumpModuleList:
 		for mod in mtl.Modules:
 			t.modules.append(MinidumpModule.parse(mod, buff))
 		return t
-	
+
 	@staticmethod
 	async def aparse(dir, buff):
 		t = MinidumpModuleList()
@@ -242,15 +242,14 @@ class MinidumpModuleList:
 			x = await MinidumpModule.aparse(mod, buff)
 			t.modules.append(x)
 		return t
-		
+
 	def to_table(self):
 		t = []
 		t.append(MinidumpModule.get_header())
 		for mod in self.modules:
 			t.append(mod.to_row())
 		return t
-		
+
 	def __str__(self):
 		t  = '== ModuleList ==\n' + construct_table(self.to_table())
 		return t
-		

@@ -5,7 +5,7 @@
 #
 import io
 import enum
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680372(v=vs.85).aspx
 class MINIDUMP_HANDLE_DATA_STREAM:
@@ -14,7 +14,7 @@ class MINIDUMP_HANDLE_DATA_STREAM:
 		self.SizeOfDescriptor = None
 		self.NumberOfDescriptors = None
 		self.Reserved = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mhds = MINIDUMP_HANDLE_DATA_STREAM()
@@ -22,9 +22,9 @@ class MINIDUMP_HANDLE_DATA_STREAM:
 		mhds.SizeOfDescriptor = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.NumberOfDescriptors = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhds.Reserved = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-			
+
 		return mhds
-	
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680374(v=vs.85).aspx
 class MINIDUMP_HANDLE_DESCRIPTOR:
 	size = 32
@@ -36,7 +36,7 @@ class MINIDUMP_HANDLE_DESCRIPTOR:
 		self.GrantedAccess = None
 		self.HandleCount = None
 		self.PointerCount = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mhd = MINIDUMP_HANDLE_DESCRIPTOR()
@@ -47,11 +47,11 @@ class MINIDUMP_HANDLE_DESCRIPTOR:
 		mhd.GrantedAccess = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhd.HandleCount = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		mhd.PointerCount = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		
+
 		return mhd
-		
+
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680373(v=vs.85).aspx
-class MINIDUMP_HANDLE_DESCRIPTOR_2:	
+class MINIDUMP_HANDLE_DESCRIPTOR_2:
 	def __init__(self):
 		self.Handle = None
 		self.TypeNameRva = None
@@ -62,7 +62,7 @@ class MINIDUMP_HANDLE_DESCRIPTOR_2:
 		self.PointerCount = None
 		self.ObjectInfoRva = None
 		self.Reserved0 = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mhd = MINIDUMP_HANDLE_DESCRIPTOR_2()
@@ -78,24 +78,24 @@ class MINIDUMP_HANDLE_DESCRIPTOR_2:
 		return mhd
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680376(v=vs.85).aspx
-class MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE(enum.Enum): 
+class MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE(enum.Enum):
 	MiniHandleObjectInformationNone = 0
 	MiniThreadInformation1 = 1
 	MiniMutantInformation1 = 2
 	MiniMutantInformation2 = 3
 	MiniProcessInformation1 = 4
 	MiniProcessInformation2 = 5
-	
+
 
 class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 	def __init__(self):
 		self.NextInfoRva = None
 		self.InfoType = None
 		self.SizeOfInfo = None
-		
+
 		#high-level, delete this when documentation becomes available!
 		self.info_bytes = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mhoi = MINIDUMP_HANDLE_OBJECT_INFORMATION()
@@ -116,14 +116,14 @@ class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 		mhoi.SizeOfInfo = int.from_bytes(t, byteorder = 'little', signed = False)
 		mhoi.info_bytes = await buff.read(mhoi.SizeOfInfo)
 		return mhoi
-		
+
 class MinidumpHandleObjectInformation:
 	def __init__(self):
 		self.NextInfo = None
 		self.InfoType = None
 		self.SizeOfInfo = None
 		self.info_bytes = None
-	
+
 	@staticmethod
 	def parse(mhoi):
 		t = MinidumpHandleObjectInformation()
@@ -131,12 +131,12 @@ class MinidumpHandleObjectInformation:
 		t.SizeOfInfo = mhoi.SizeOfInfo
 		t.info_bytes = mhoi.info_bytes
 		return t
-	
+
 	def __str__(self):
 		return self.info_bytes.hex()
-	
-	
-		
+
+
+
 class MinidumpHandleDescriptor:
 	def __init__(self):
 		self.Handle = None
@@ -147,7 +147,7 @@ class MinidumpHandleDescriptor:
 		self.HandleCount = None
 		self.PointerCount = None
 		self.ObjectInfos = []
-	
+
 	@staticmethod
 	def parse(t, buff):
 		mhd = MinidumpHandleDescriptor()
@@ -181,7 +181,7 @@ class MinidumpHandleDescriptor:
 			if t.ObjectInfoRva is not None and t.ObjectInfoRva != 0:
 				await MinidumpHandleDescriptor.awalk_objectinfo(mhd, t.ObjectInfoRva, buff)
 		return mhd
-	
+
 	@staticmethod
 	def walk_objectinfo(mhd, start, buff):
 		while start is not None and start != 0:
@@ -199,8 +199,8 @@ class MinidumpHandleDescriptor:
 			t = MinidumpHandleObjectInformation.parse(mhoi)
 			mhd.ObjectInfos.append(t)
 			start = t.NextInfo
-		
-		
+
+
 	def __str__(self):
 		t = '== MinidumpHandleDescriptor == \n'
 		t += 'Handle 0x%08x ' % self.Handle
@@ -213,12 +213,12 @@ class MinidumpHandleDescriptor:
 		for oi in self.ObjectInfos:
 			t += str(oi)
 		return t
-		
+
 class MinidumpHandleDataStream:
 	def __init__(self):
 		self.header = None
 		self.handles = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpHandleDataStream()
@@ -251,7 +251,7 @@ class MinidumpHandleDataStream:
 				r = await MinidumpHandleDescriptor.aparse(mhd, buff)
 				t.handles.append(r)
 		return t
-		
+
 	def __str__(self):
 		t  = '== MinidumpHandleDataStream ==\n'
 		for handle in self.handles:

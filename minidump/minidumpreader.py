@@ -14,10 +14,10 @@ class VirtualSegment:
 		self.end = end
 		self.start_file_address = start_file_address
 
-		
+
 
 		self.data = None
-	
+
 	def inrange(self, start, end):
 		return self.start <= start and end<= self.end
 
@@ -46,11 +46,11 @@ class MinidumpBufferedMemorySegment:
 		if end is None:
 			file_handle.seek(self.start_file_address + start)
 			return file_handle.read(self.end_address - (self.start_file_address + start))
-		
+
 		for chunk in self.chunks:
 			if chunk.inrange(start, end):
 				return chunk.data[start - chunk.start: end - chunk.start]
-		
+
 		if self.total_size <= 2*self.chunksize:
 			chunksize = self.total_size
 			vs = VirtualSegment(0, chunksize, self.start_file_address)
@@ -62,12 +62,12 @@ class MinidumpBufferedMemorySegment:
 		chunksize = max((end-start), self.chunksize)
 		if start + chunksize > self.end_address:
 			chunksize = self.end_address - start
-		
+
 		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
 		file_handle.seek(vs.start_file_address)
 		vs.data = file_handle.read(chunksize)
 		self.chunks.append(vs)
-		
+
 		return vs.data[start - vs.start: end - vs.start]
 
 
@@ -335,7 +335,7 @@ class MinidumpFileReader:
 			mod = self.get_unloaded_by_name(module_name)
 			if mod is None:
 				raise Exception('Could not find module! %s' % module_name)
-		
+
 		needles = []
 		for ms in self.memory_segments:
 			if mod.baseaddress <= ms.start_virtual_address < mod.endaddress:

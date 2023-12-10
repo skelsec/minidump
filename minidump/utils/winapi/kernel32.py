@@ -19,7 +19,7 @@ class WindowsMinBuild(enum.Enum):
 	WIN_10 = 9800
 
 #utter microsoft bullshit commencing..
-def getWindowsBuild():   
+def getWindowsBuild():
     class OSVersionInfo(ctypes.Structure):
         _fields_ = [
             ("dwOSVersionInfoSize" , ctypes.c_int),
@@ -31,7 +31,7 @@ def getWindowsBuild():
     GetVersionEx = getattr( ctypes.windll.kernel32 , "GetVersionExA")
     version  = OSVersionInfo()
     version.dwOSVersionInfoSize = ctypes.sizeof(OSVersionInfo)
-    GetVersionEx( ctypes.byref(version) )    
+    GetVersionEx( ctypes.byref(version) )
     return version.dwBuildNumber
 
 def get_all_access_flags():

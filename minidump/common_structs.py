@@ -1,5 +1,5 @@
 
-# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680383(v=vs.85).aspx	
+# https://msdn.microsoft.com/en-us/library/windows/desktop/ms680383(v=vs.85).aspx
 class MINIDUMP_LOCATION_DESCRIPTOR:
 	def __init__(self):
 		self.DataSize = None
@@ -12,7 +12,7 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		t = self.DataSize.to_bytes(4, byteorder = 'little', signed = False)
 		t += self.Rva.to_bytes(4, byteorder = 'little', signed = False)
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mld = MINIDUMP_LOCATION_DESCRIPTOR()
@@ -28,11 +28,11 @@ class MINIDUMP_LOCATION_DESCRIPTOR:
 		t = await buff.read(4)
 		mld.Rva = int.from_bytes(t, byteorder = 'little', signed = False)
 		return mld
-	
+
 	def __str__(self):
 		t = 'Size: %s File offset: %s' % (self.DataSize, self.Rva)
 		return t
-		
+
 class MINIDUMP_LOCATION_DESCRIPTOR64:
 	def __init__(self):
 		self.DataSize = None
@@ -45,23 +45,23 @@ class MINIDUMP_LOCATION_DESCRIPTOR64:
 		t = self.DataSize.to_bytes(8, byteorder = 'little', signed = False)
 		t += self.Rva.to_bytes(8, byteorder = 'little', signed = False)
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mld = MINIDUMP_LOCATION_DESCRIPTOR64()
 		mld.DataSize = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		mld.Rva = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		return mld
-	
+
 	def __str__(self):
 		t = 'Size: %s File offset: %s' % (self.DataSize, self.Rva)
 		return t
-		
+
 class MINIDUMP_STRING:
 	def __init__(self):
 		self.Length = None
 		self.Buffer = None
-	
+
 	@staticmethod
 	def parse(buff):
 		ms = MINIDUMP_STRING()
@@ -76,7 +76,7 @@ class MINIDUMP_STRING:
 		ms.Length = int.from_bytes(t, byteorder = 'little', signed = False)
 		ms.Buffer = await buff.read(ms.Length)
 		return ms
-		
+
 	@staticmethod
 	def get_from_rva(rva, buff):
 		pos = buff.tell()
@@ -87,7 +87,7 @@ class MINIDUMP_STRING:
 			return ms.Buffer.decode('utf-16-le')
 		except:
 			return '<STRING_DECODE_FAILED>'
-	
+
 	@staticmethod
 	async def aget_from_rva(rva, buff):
 		pos = buff.tell()
@@ -98,14 +98,14 @@ class MINIDUMP_STRING:
 			return ms.Buffer.decode('utf-16-le')
 		except:
 			return '<STRING_DECODE_FAILED>'
-		
+
 class MinidumpMemorySegment:
 	def __init__(self):
 		self.start_virtual_address = None
 		self.size = None
 		self.end_virtual_address = None
 		self.start_file_address = None
-	
+
 	@staticmethod
 	def parse_mini(memory_decriptor, buff):
 		"""
@@ -118,7 +118,7 @@ class MinidumpMemorySegment:
 		mms.start_file_address = memory_decriptor.Rva
 		mms.end_virtual_address = mms.start_virtual_address + mms.size
 		return mms
-	
+
 	@staticmethod
 	def parse_full(memory_decriptor, rva):
 		mms = MinidumpMemorySegment()
@@ -126,20 +126,20 @@ class MinidumpMemorySegment:
 		mms.size = memory_decriptor.DataSize
 		mms.start_file_address = rva
 		mms.end_virtual_address = mms.start_virtual_address + mms.size
-		return mms		
-		
+		return mms
+
 	def inrange(self, virt_addr):
 		if virt_addr >= self.start_virtual_address and virt_addr < self.end_virtual_address:
 			return True
 		return False
-	
+
 	def read(self, virtual_address, size, file_handler):
 		if virtual_address > self.end_virtual_address or virtual_address < self.start_virtual_address:
 			raise Exception('Reading from wrong segment!')
-		
+
 		if virtual_address+size > self.end_virtual_address:
 			raise Exception('Read would cross boundaries!')
-		
+
 		pos = file_handler.tell()
 		offset = virtual_address - self.start_virtual_address
 		file_handler.seek(self.start_file_address + offset, 0)
@@ -150,17 +150,17 @@ class MinidumpMemorySegment:
 	async def aread(self, virtual_address, size, file_handler):
 		if virtual_address > self.end_virtual_address or virtual_address < self.start_virtual_address:
 			raise Exception('Reading from wrong segment!')
-		
+
 		if virtual_address+size > self.end_virtual_address:
 			raise Exception('Read would cross boundaries!')
-		
+
 		pos = file_handler.tell()
 		offset = virtual_address - self.start_virtual_address
 		await file_handler.seek(self.start_file_address + offset, 0)
 		data = await file_handler.read(size)
 		await file_handler.seek(pos, 0)
 		return data
-		
+
 	def search(self, pattern, file_handler, find_first = False, chunksize = 50*1024):
 		if len(pattern) > self.size:
 			return []
@@ -181,14 +181,14 @@ class MinidumpMemorySegment:
 					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
 					file_handler.seek(pos, 0)
 					return [self.start_virtual_address + marker]
-			
-			
+
+
 			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
-			
+
 		else:
 			data = file_handler.read(self.size)
 			file_handler.seek(pos, 0)
-			
+
 			offset = 0
 			while len(data) > len(pattern):
 				marker = data.find(pattern)
@@ -199,7 +199,7 @@ class MinidumpMemorySegment:
 				offset += marker + 1
 				if find_first is True:
 					return fl
-		
+
 		file_handler.seek(pos, 0)
 		return fl
 
@@ -209,7 +209,7 @@ class MinidumpMemorySegment:
 		pos = file_handler.tell()
 		await file_handler.seek(self.start_file_address, 0)
 		fl = []
-		
+
 		if find_first is True:
 			chunksize = min(chunksize, self.size)
 			data = b''
@@ -224,10 +224,10 @@ class MinidumpMemorySegment:
 					#print('FOUND! size: %s i: %s read: %s perc: %s' % (self.size, i, i*chunksize, 100*((i*chunksize)/self.size)))
 					await file_handler.seek(pos, 0)
 					return [self.start_virtual_address + marker]
-			
-			
+
+
 			#print('NOTFOUND! size: %s i: %s read: %s perc %s' % (self.size, i, len(data), 100*(len(data)/self.size) ))
-		
+
 		else:
 			offset = 0
 			data = await file_handler.read(self.size)
@@ -241,11 +241,11 @@ class MinidumpMemorySegment:
 				offset += marker + 1
 				if find_first is True:
 					return fl
-		
+
 		await file_handler.seek(pos, 0)
 		return fl
-	
-	
+
+
 	@staticmethod
 	def get_header():
 		t = [
@@ -254,7 +254,7 @@ class MinidumpMemorySegment:
 			'Size',
 		]
 		return t
-	
+
 	def to_row(self):
 		t = [
 			hex(self.start_virtual_address),
@@ -262,12 +262,12 @@ class MinidumpMemorySegment:
 			hex(self.size)
 		]
 		return t
-		
+
 	def __str__(self):
 		t = 'VA Start: %s, RVA: %s, Size: %s' % (hex(self.start_virtual_address), hex(self.start_file_address), hex(self.size))
 		return t
-		
-		
+
+
 
 def hexdump( src, length=16, sep='.', start = 0):
 	'''
@@ -314,7 +314,7 @@ def hexdump( src, length=16, sep='.', start = 0):
 		else:
 			result.append(('%08x(+%04x):  %-'+str(length*(2+1)+1)+'s  |%s|') % (start+i, i, hexa, text));
 	return '\n'.join(result);
-	
+
 def construct_table(lines, separate_head=True):
 	"""Prints a formatted table given a 2 dimensional array"""
 	#Count the column width
@@ -325,7 +325,7 @@ def construct_table(lines, separate_head=True):
 							widths.append(0)
 					if size > widths[i]:
 							widths[i] = size
-       
+
 	#Generate the format string to pad the columns
 	print_string = ""
 	for i,width in enumerate(widths):
@@ -333,12 +333,12 @@ def construct_table(lines, separate_head=True):
 	if (len(print_string) == 0):
 			return
 	print_string = print_string[:-3]
-       
+
 	#Print the actual data
 	t = ''
 	for i,line in enumerate(lines):
 			t += print_string.format(*line) + '\n'
 			if (i == 0 and separate_head):
 					t += "-"*(sum(widths)+3*(len(widths)-1)) + '\n'
-					
+
 	return t

@@ -118,7 +118,7 @@ class LiveSystemReader(MinidumpSystemReader):
 			mmod.ModuleName = modname
 
 			module_list.Modules.append(mmod)
-		
+
 		return module_list
 
 	def get_sections(self):
@@ -149,11 +149,11 @@ class LiveSystemReader(MinidumpSystemReader):
 
 			meminfolist.entries.append(mi)
 			print(str(mi))
-			
+
 			i += mi_raw.RegionSize
 		self.meminfolist = meminfolist
 		return meminfolist
-	
+
 	def get_threads(self):
 		pass
 
@@ -219,24 +219,24 @@ class MinidumpWriter:
 			self.header_buffer.write(directory.to_bytes())
 
 	def finalize_header(self):
-		# currently only using the 32 bit MINIDUMP_LOCATION_DESCRIPTOR, this is because we expect that the header 
+		# currently only using the 32 bit MINIDUMP_LOCATION_DESCRIPTOR, this is because we expect that the header
 		# and any data in the header (including all streams data except memory stream) will not be bigger than 4GB
-		# memory stream is a special case, as it cvan be longer than 4GB but the RVA to the beginning of the memory stream 
+		# memory stream is a special case, as it cvan be longer than 4GB but the RVA to the beginning of the memory stream
 		# is not expected to be bigger than 4G max.
 		# if this becomes the case then this all will fail :)
 		header_size = 28
 		header_size += len(self.streams) * 8 #this is for the dictionary itself, not the streams
 		for stream in self.streams:
 			header_size += self.streams[stream].get_size()
-		
+
 		header_size += 10 * 1024 #allocating 10k for the memory info
 
 		self.prepare_header()
 		self.prepare_directory()
 
-		
-		
-		
+
+
+
 
 	def create_streams(self):
 		sysinfo = self.sysreader.get_sysinfo()
@@ -245,32 +245,32 @@ class MinidumpWriter:
 		print(str(sysinfo))
 		moduleinfo = self.sysreader.get_modules()
 		self.streams[MINIDUMP_STREAM_TYPE.ModuleListStream] = moduleinfo
-		
+
 		sections = self.sysreader.get_sections()
 		self.streams[MINIDUMP_STREAM_TYPE.MemoryInfoListStream] = sections
-		
+
 		self.finalize_header()
 
 		memory = self.sysreader.get_memory()
-		
-		
+
+
 	#def get_total_streams_cnt(self):
 	#	total = 0
 	#	for t in self.streams:
 	#		total += len(t)
 	#	return total
 
-	
 
-		
+
+
 
 	#def construct_directory(self):
 	#
 	#	total_streams = self.get_total_streams_cnt()
 	#
-	#	for stype in self.streams:			
+	#	for stype in self.streams:
 	#		for stream in self.streams[stype]:
-	#			
+	#
 	#			stream
 	#
 	#			loc = MINIDUMP_LOCATION_DESCRIPTOR()
@@ -295,13 +295,13 @@ class MinidumpWriter:
 		#modules
 		#self.sysreader.get_modules(self.hdr_buff, self.data_buff)
 		#self.stream_cnt += 1
-		
+
 		#write header
 		self.write_header()
-		
+
 
 		#append datastream for memory, with correct rva
-		
+
 		#dump memory
 
 	def run(self):

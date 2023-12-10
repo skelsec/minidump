@@ -6,7 +6,7 @@
 import io
 import enum
 
-#https://msdn.microsoft.com/en-us/library/windows/desktop/ms680388(v=vs.85).aspx	
+#https://msdn.microsoft.com/en-us/library/windows/desktop/ms680388(v=vs.85).aspx
 class MinidumpMiscInfo2Flags1(enum.IntFlag):
 	MINIDUMP_MISC1_PROCESS_ID = 0x00000001 #ProcessId is used.
 	MINIDUMP_MISC1_PROCESS_TIMES = 0x00000002 #ProcessCreateTime, ProcessKernelTime, and ProcessUserTime are used.
@@ -27,7 +27,7 @@ class MINIDUMP_MISC_INFO:
 		self.ProcessCreateTime = None
 		self.ProcessUserTime = None
 		self.ProcessKernelTime = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mmi = MINIDUMP_MISC_INFO()
@@ -43,10 +43,10 @@ class MINIDUMP_MISC_INFO:
 			mmi.ProcessKernelTime = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		else:
 			buff.read(12)
-			
+
 		return mmi
 
-#https://msdn.microsoft.com/en-us/library/windows/desktop/ms680388(v=vs.85).aspx		
+#https://msdn.microsoft.com/en-us/library/windows/desktop/ms680388(v=vs.85).aspx
 class MINIDUMP_MISC_INFO_2:
 	size = 44
 	def __init__(self):
@@ -61,7 +61,7 @@ class MINIDUMP_MISC_INFO_2:
 		self.ProcessorMhzLimit = None
 		self.ProcessorMaxIdleState = None
 		self.ProcessorCurrentIdleState = None
-	
+
 	@staticmethod
 	def parse(buff):
 		mmi = MINIDUMP_MISC_INFO_2()
@@ -85,9 +85,9 @@ class MINIDUMP_MISC_INFO_2:
 			mmi.ProcessorCurrentIdleState = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		else:
 			buff.read(20)
-		
+
 		return mmi
-		
+
 class MinidumpMiscInfo:
 	def __init__(self):
 		self.ProcessId = None
@@ -99,7 +99,7 @@ class MinidumpMiscInfo:
 		self.ProcessorMhzLimit = None
 		self.ProcessorMaxIdleState = None
 		self.ProcessorCurrentIdleState = None
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMiscInfo()
@@ -148,7 +148,7 @@ class MinidumpMiscInfo:
 			t.ProcessorMaxIdleState = misc.ProcessorMaxIdleState
 			t.ProcessorCurrentIdleState = misc.ProcessorCurrentIdleState
 		return t
-		
+
 	def __str__(self):
 		t  = '== MinidumpMiscInfo ==\n'
 		t += 'ProcessId %s\n' % self.ProcessId

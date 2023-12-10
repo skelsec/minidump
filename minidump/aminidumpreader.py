@@ -16,7 +16,7 @@ class VirtualSegment:
 		self.start_file_address = start_file_address
 
 		self.data = None
-	
+
 	def inrange(self, start, end):
 		return self.start <= start and end<= self.end
 
@@ -45,11 +45,11 @@ class AMinidumpBufferedMemorySegment:
 		if end is None:
 			await file_handle.seek(self.start_file_address + start)
 			return await file_handle.read(self.end_address - (self.start_file_address + start))
-		
+
 		for chunk in self.chunks:
 			if chunk.inrange(start, end):
 				return chunk.data[start - chunk.start: end - chunk.start]
-		
+
 		if self.total_size <= 2*self.chunksize:
 			chunksize = self.total_size
 			vs = VirtualSegment(0, chunksize, self.start_file_address)
@@ -61,12 +61,12 @@ class AMinidumpBufferedMemorySegment:
 		chunksize = max((end-start), self.chunksize)
 		if start + chunksize > self.end_address:
 			chunksize = self.end_address - start
-		
+
 		vs = VirtualSegment(start, start+chunksize, self.start_file_address + start)
 		await file_handle.seek(vs.start_file_address)
 		vs.data = await file_handle.read(chunksize)
 		self.chunks.append(vs)
-		
+
 		return vs.data[start - vs.start: end - vs.start]
 
 class AMinidumpBufferedReader:

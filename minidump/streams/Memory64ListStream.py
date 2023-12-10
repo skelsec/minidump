@@ -4,7 +4,7 @@
 #  Tamas Jos (@skelsec)
 #
 import io
-from minidump.common_structs import * 
+from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680387(v=vs.85).aspx
 class MINIDUMP_MEMORY64_LIST:
@@ -22,7 +22,7 @@ class MINIDUMP_MEMORY64_LIST:
 		for memrange in self.MemoryRanges:
 			t += memrange.to_bytes()
 		return t
-	
+
 	@staticmethod
 	def parse(buff):
 		mml = MINIDUMP_MEMORY64_LIST()
@@ -32,14 +32,14 @@ class MINIDUMP_MEMORY64_LIST:
 		mml.BaseRva = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		for _ in range(mml.NumberOfMemoryRanges):
 			mml.MemoryRanges.append(MINIDUMP_MEMORY_DESCRIPTOR64.parse(buff))
-			
+
 			#sometimes buggy minidumps have a wrong number of memory ranges, so we need to check if we reached the end of the buffer
 			curpos = buff.tell()
 			if curpos == buffsize:
 				break
-		
+
 		return mml
-		
+
 	def __str__(self):
 		t  = '== MINIDUMP_MEMORY64_LIST ==\n'
 		t += 'NumberOfMemoryRanges: %s\n' % self.NumberOfMemoryRanges
@@ -62,14 +62,14 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 		t = self.StartOfMemoryRange.to_bytes(8, byteorder = 'little', signed = False)
 		t += self.DataSize.to_bytes(8, byteorder = 'little', signed = False)
 		return t
-		
+
 	@staticmethod
 	def parse(buff):
 		md = MINIDUMP_MEMORY_DESCRIPTOR64()
 		md.StartOfMemoryRange = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		md.DataSize = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		return md
-		
+
 	def __str__(self):
 		t = 'Start: %s' % hex(self.StartOfMemoryRange)
 		t += 'Size: %s' % self.DataSize
@@ -78,7 +78,7 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 class MinidumpMemory64List:
 	def __init__(self):
 		self.memory_segments = []
-	
+
 	@staticmethod
 	def parse(dir, buff):
 		t = MinidumpMemory64List()
@@ -104,14 +104,13 @@ class MinidumpMemory64List:
 			mml.memory_segments.append(ms)
 			rva += mod.DataSize
 		return mml
-		
+
 	def to_table(self):
 		t = []
 		t.append(MinidumpMemorySegment.get_header())
 		for mod in self.memory_segments:
 			t.append(mod.to_row())
 		return t
-		
+
 	def __str__(self):
 		return '== MinidumpMemory64List ==\n' + construct_table(self.to_table())
-	
