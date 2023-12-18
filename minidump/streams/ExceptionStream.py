@@ -110,6 +110,8 @@ class ExceptionCode(enum.Enum):
 
 #https://msdn.microsoft.com/en-us/library/windows/desktop/ms680367(v=vs.85).aspx
 class MINIDUMP_EXCEPTION:
+	EXCEPTION_MAXIMUM_PARAMETERS = 15
+
 	def __init__(self):
 		self.ExceptionCode = None
 		self.ExceptionFlags = None
@@ -134,7 +136,7 @@ class MINIDUMP_EXCEPTION:
 		me.ExceptionAddress = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		me.NumberParameters = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		me.__unusedAlignment = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for _ in range(me.NumberParameters):
+		for _ in range(self.EXCEPTION_MAXIMUM_PARAMETERS):
 			me.ExceptionInformation.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 
 		return me
