@@ -136,7 +136,7 @@ class MINIDUMP_EXCEPTION:
 		me.ExceptionAddress = int.from_bytes(buff.read(8), byteorder = 'little', signed = False)
 		me.NumberParameters = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
 		me.__unusedAlignment = int.from_bytes(buff.read(4), byteorder = 'little', signed = False)
-		for _ in range(self.EXCEPTION_MAXIMUM_PARAMETERS):
+		for _ in range(MINIDUMP_EXCEPTION.EXCEPTION_MAXIMUM_PARAMETERS):
 			me.ExceptionInformation.append(int.from_bytes(buff.read(8), byteorder = 'little', signed = False))
 
 		me.ExceptionInformation = me.ExceptionInformation[:me.NumberParameters]
