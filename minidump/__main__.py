@@ -27,6 +27,7 @@ def run():
 	parser.add_argument('--exception', action='store_true', help='Show exception records')
 	parser.add_argument('--handles', action='store_true', help='List handles')
 	parser.add_argument('--misc', action='store_true', help='Show misc info')
+	parser.add_argument('--peb', action='store_true', help='Show PEB info')
 	parser.add_argument('--all', action='store_true', help='Show all info')
 	parser.add_argument('-r', '--read-addr', type=lambda x: int(x,0), help='Dump a memory region from the process\'s addres space')
 	parser.add_argument('-s', '--read-size', type=lambda x: int(x,0), default = 0x20, help='Dump a memory region from the process\'s addres space')
@@ -89,6 +90,10 @@ def run():
 				print(str(mf.misc_info))
 		if args.all or args.header:
 			print(str(mf.header))
+		
+		if args.all or args.peb:
+			if mf.peb is not None:
+				print(str(mf.peb))
 
 		if args.read_addr:
 			buff_reader = reader.get_buffered_reader()

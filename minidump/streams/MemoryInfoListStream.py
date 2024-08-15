@@ -65,9 +65,9 @@ class MemoryState(enum.Enum):
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680385(v=vs.85).aspx
 class MINIDUMP_MEMORY_INFO_LIST:
 	def __init__(self):
-		self.SizeOfHeader = 16
-		self.SizeOfEntry = 48
-		self.NumberOfEntries = None
+		self.SizeOfHeader:int = 16
+		self.SizeOfEntry:int = 48
+		self.NumberOfEntries:int = None
 		self.entries = []
 
 	def get_size(self):

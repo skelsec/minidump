@@ -7,15 +7,16 @@
 
 import io
 import enum
+from typing import List
 from minidump.common_structs import *
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680368(v=vs.85).aspx
 class MINIDUMP_EXCEPTION_STREAM:
 	def __init__(self):
-		self.ThreadId = None
-		self.alignment = None
-		self.ExceptionRecord = None
-		self.ThreadContext = None
+		self.ThreadId:int = None
+		self.alignment:int = None
+		self.ExceptionRecord:MINIDUMP_EXCEPTION = None
+		self.ThreadContext:MINIDUMP_LOCATION_DESCRIPTOR = None
 
 	@staticmethod
 	def parse(buff):
@@ -176,7 +177,7 @@ class MINIDUMP_EXCEPTION:
 
 class ExceptionList:
 	def __init__(self):
-		self.exception_records = []
+		self.exception_records:List[MINIDUMP_EXCEPTION_STREAM] = []
 
 	@staticmethod
 	def parse(dir, buff):

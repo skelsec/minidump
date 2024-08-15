@@ -5,8 +5,8 @@
 #
 class MINIDUMP_USER_STREAM:
 	def __init__(self):
-		self.Type = None
-		self.BufferSize = None
+		self.Type:int = None
+		self.BufferSize:int = None
 		self.Buffer = None
 
 	@staticmethod

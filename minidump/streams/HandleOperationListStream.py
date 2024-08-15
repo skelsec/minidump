@@ -5,10 +5,10 @@
 #
 class MINIDUMP_HANDLE_OPERATION_LIST:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfEntry = None
-		self.NumberOfEntries = None
-		self.Reserved = None
+		self.SizeOfHeader:int = None
+		self.SizeOfEntry:int = None
+		self.NumberOfEntries:int = None
+		self.Reserved:int = None
 
 	@staticmethod
 	def parse(dir, buff):

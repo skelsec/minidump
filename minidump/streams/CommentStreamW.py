@@ -5,7 +5,7 @@
 #
 class CommentStreamW:
 	def __init__(self):
-		self.data = None
+		self.data:str = None
 
 	def to_bytes(self):
 		return self.data.encode('utf-16-le')

@@ -5,13 +5,14 @@
 #
 import io
 from minidump.common_structs import *
+from typing import List
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680387(v=vs.85).aspx
 class MINIDUMP_MEMORY64_LIST:
 	def __init__(self):
-		self.NumberOfMemoryRanges = None
-		self.BaseRva = None
-		self.MemoryRanges = []
+		self.NumberOfMemoryRanges:int = None
+		self.BaseRva:int = None
+		self.MemoryRanges:List[MINIDUMP_MEMORY_DESCRIPTOR64] = []
 
 	def get_size(self):
 		return 8 + 8 + len(self.MemoryRanges) * MINIDUMP_MEMORY_DESCRIPTOR64().get_size()
@@ -52,8 +53,8 @@ class MINIDUMP_MEMORY64_LIST:
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680384(v=vs.85).aspx
 class MINIDUMP_MEMORY_DESCRIPTOR64:
 	def __init__(self):
-		self.StartOfMemoryRange = None
-		self.DataSize = None
+		self.StartOfMemoryRange:int = None
+		self.DataSize:int = None
 
 	def get_size(self):
 		return 16
@@ -77,7 +78,7 @@ class MINIDUMP_MEMORY_DESCRIPTOR64:
 
 class MinidumpMemory64List:
 	def __init__(self):
-		self.memory_segments = []
+		self.memory_segments:List[MinidumpMemorySegment] = []
 
 	@staticmethod
 	def parse(dir, buff):

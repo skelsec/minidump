@@ -4,8 +4,8 @@ from minidump.common_structs import MINIDUMP_LOCATION_DESCRIPTOR
 
 class MINIDUMP_DIRECTORY:
 	def __init__(self):
-		self.StreamType = None
-		self.Location = None
+		self.StreamType:MINIDUMP_STREAM_TYPE = None
+		self.Location:MINIDUMP_LOCATION_DESCRIPTOR = None
 
 	def to_bytes(self):
 		t = self.StreamType.value.to_bytes(4, byteorder = 'little', signed = False)

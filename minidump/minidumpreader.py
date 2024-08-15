@@ -272,9 +272,6 @@ class MinidumpBufferedReader:
 		t = self.reader.search_module(module_name, pattern, find_first = find_first, reverse_order = reverse_order, chunksize = self.segment_chunk_size)
 		return t
 
-
-
-
 class MinidumpFileReader:
 	def __init__(self, minidumpfile):
 		self.modules = minidumpfile.modules.modules
@@ -358,4 +355,3 @@ class MinidumpFileReader:
 			if segment.inrange(virt_addr):
 				return segment.read(virt_addr, size, self.file_handle)
 		raise Exception('Address not in memory range! %s' % hex(virt_addr))
-

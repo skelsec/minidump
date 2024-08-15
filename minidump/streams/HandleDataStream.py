@@ -6,14 +6,15 @@
 import io
 import enum
 from minidump.common_structs import *
+from typing import List
 
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680372(v=vs.85).aspx
 class MINIDUMP_HANDLE_DATA_STREAM:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfDescriptor = None
-		self.NumberOfDescriptors = None
-		self.Reserved = None
+		self.SizeOfHeader:int = None
+		self.SizeOfDescriptor:int = None
+		self.NumberOfDescriptors:int = None
+		self.Reserved:int = None
 
 	@staticmethod
 	def parse(buff):
@@ -29,13 +30,13 @@ class MINIDUMP_HANDLE_DATA_STREAM:
 class MINIDUMP_HANDLE_DESCRIPTOR:
 	size = 32
 	def __init__(self):
-		self.Handle = None
-		self.TypeNameRva = None
-		self.ObjectNameRva = None
-		self.Attributes = None
-		self.GrantedAccess = None
-		self.HandleCount = None
-		self.PointerCount = None
+		self.Handle:int = None
+		self.TypeNameRva:int = None
+		self.ObjectNameRva:int = None
+		self.Attributes:int = None
+		self.GrantedAccess:int = None
+		self.HandleCount:int = None
+		self.PointerCount:int = None
 
 	@staticmethod
 	def parse(buff):
@@ -53,15 +54,15 @@ class MINIDUMP_HANDLE_DESCRIPTOR:
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680373(v=vs.85).aspx
 class MINIDUMP_HANDLE_DESCRIPTOR_2:
 	def __init__(self):
-		self.Handle = None
-		self.TypeNameRva = None
-		self.ObjectNameRva = None
-		self.Attributes = None
-		self.GrantedAccess = None
-		self.HandleCount = None
-		self.PointerCount = None
-		self.ObjectInfoRva = None
-		self.Reserved0 = None
+		self.Handle:int = None
+		self.TypeNameRva:int = None
+		self.ObjectNameRva:int = None
+		self.Attributes:int = None
+		self.GrantedAccess:int = None
+		self.HandleCount:int = None
+		self.PointerCount:int = None
+		self.ObjectInfoRva:int = None
+		self.Reserved0:int = None
 
 	@staticmethod
 	def parse(buff):
@@ -89,12 +90,12 @@ class MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE(enum.Enum):
 
 class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 	def __init__(self):
-		self.NextInfoRva = None
-		self.InfoType = None
-		self.SizeOfInfo = None
+		self.NextInfoRva:int = None
+		self.InfoType:int = None
+		self.SizeOfInfo:int = None
 
 		#high-level, delete this when documentation becomes available!
-		self.info_bytes = None
+		self.info_bytes:bytes = None
 
 	@staticmethod
 	def parse(buff):
@@ -120,9 +121,9 @@ class MINIDUMP_HANDLE_OBJECT_INFORMATION:
 class MinidumpHandleObjectInformation:
 	def __init__(self):
 		self.NextInfo = None
-		self.InfoType = None
-		self.SizeOfInfo = None
-		self.info_bytes = None
+		self.InfoType:int = None
+		self.SizeOfInfo:int = None
+		self.info_bytes:bytes = None
 
 	@staticmethod
 	def parse(mhoi):
@@ -139,14 +140,14 @@ class MinidumpHandleObjectInformation:
 
 class MinidumpHandleDescriptor:
 	def __init__(self):
-		self.Handle = None
-		self.TypeName = None
-		self.ObjectName = None
-		self.Attributes = None
-		self.GrantedAccess = None
-		self.HandleCount = None
-		self.PointerCount = None
-		self.ObjectInfos = []
+		self.Handle:int = None
+		self.TypeName:str = None
+		self.ObjectName:str = None
+		self.Attributes:int = None
+		self.GrantedAccess:int = None
+		self.HandleCount:int = None
+		self.PointerCount:int = None
+		self.ObjectInfos:List[MinidumpHandleObjectInformation] = []
 
 	@staticmethod
 	def parse(t, buff):
@@ -216,8 +217,8 @@ class MinidumpHandleDescriptor:
 
 class MinidumpHandleDataStream:
 	def __init__(self):
-		self.header = None
-		self.handles = []
+		self.header:MINIDUMP_HANDLE_DATA_STREAM = None
+		self.handles:List[MinidumpHandleDescriptor] = []
 
 	@staticmethod
 	def parse(dir, buff):

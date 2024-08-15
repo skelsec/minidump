@@ -28,6 +28,11 @@ class MinidumpShell(cmd.Cmd):
 		"""Opens minidump file"""
 		self.mini = MinidumpFile.parse(filename)
 		self.reader = self.mini.get_reader().get_buffered_reader()
+	
+	def do_peb(self, args):
+		"""Shows PEB information (if available)"""
+		if self.mini.peb is not None:
+			print(str(self.mini.peb))
 
 	def do_threads(self, args):
 		"""Lists all thread information (if available)"""

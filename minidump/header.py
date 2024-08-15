@@ -5,15 +5,15 @@ import io
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
 class MinidumpHeader:
 	def __init__(self):
-		self.Signature = 'PMDM'
-		self.Version = None
-		self.ImplementationVersion = None
-		self.NumberOfStreams = None
-		self.StreamDirectoryRva = None
-		self.CheckSum = 0
-		self.Reserved = 0
-		self.TimeDateStamp = 0
-		self.Flags = None
+		self.Signature:str = 'PMDM'
+		self.Version:int = None
+		self.ImplementationVersion:int = None
+		self.NumberOfStreams:int = None
+		self.StreamDirectoryRva:int = None
+		self.CheckSum:int = 0
+		self.Reserved:int = 0
+		self.TimeDateStamp:int = 0
+		self.Flags:MINIDUMP_TYPE = None
 
 	def to_bytes(self):
 		t = self.Signature.encode('ascii')

@@ -5,12 +5,12 @@
 #
 class MINIDUMP_FUNCTION_TABLE_STREAM:
 	def __init__(self):
-		self.SizeOfHeader = None
-		self.SizeOfDescriptor = None
-		self.SizeOfNativeDescriptor = None
-		self.SizeOfFunctionEntry = None
-		self.NumberOfDescriptors = None
-		self.SizeOfAlignPad = None
+		self.SizeOfHeader:int = None
+		self.SizeOfDescriptor:int = None
+		self.SizeOfNativeDescriptor:int = None
+		self.SizeOfFunctionEntry:int = None
+		self.NumberOfDescriptors:int = None
+		self.SizeOfAlignPad:int = None
 
 	@staticmethod
 	def parse(dir, buff):
