@@ -220,19 +220,32 @@ class AMinidumpFile:
 			"""
 
 	def __str__(self):
-		t = '== Minidump File ==\n'
-		t += str(self.header)
-		t += str(self.sysinfo)
-		for dir in self.directories:
-			t += str(dir) + '\n'
-		for mod in self.modules.modules:
-			t += str(mod) + '\n'
-		if self.memory_segments is not None:
-			for segment in self.memory_segments:
-				t+= str(segment) + '\n'
+		t = "== Minidump File ==\n"
+		
+		if self.header:
+			t += str(self.header) + '\n'
+		
+		if self.sysinfo:
+			t += str(self.sysinfo) + '\n'
+
+		if self.directories is not None:
+			for directory in self.directories:
+				t += str(directory) + '\n'
+
+		if self.modules and hasattr(self.modules, "modules"):
+			for module in self.modules.modules:
+				t += str(module) + '\n'
+
+		if self.memory_segments and hasattr(self.memory_segments, "memory_segments"):
+			for segment in self.memory_segments.memory_segments:
+				t += str(segment) + '\n'
 
 		if self.memory_segments_64 is not None:
-			for segment in self.memory_segments_64:
-				t+= str(segment) + '\n'
+			if hasattr(self.memory_segments_64, '__iter__'):
+				for segment in self.memory_segments_64:
+					t += str(segment) + '\n'
+			elif hasattr(self.memory_segments_64, "memory_segments_64") and hasattr(self.memory_segments_64.memory_segments_64, '__iter__'):
+				for segment in self.memory_segments_64.memory_segments_64:
+					t += str(segment) + '\n'
 
 		return t
