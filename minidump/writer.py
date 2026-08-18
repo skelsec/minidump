@@ -204,7 +204,6 @@ class MinidumpWriter:
 		self.header.NumberOfStreams = len(self.streams) +1 # +1 is fot he memory info stream
 		self.header.StreamDirectoryRva = self.directory_rva
 		#self.header.CheckSum = None
-		#self.header.Reserved = None
 		#self.header.TimeDateStamp = None
 		self.header.Flags = MINIDUMP_TYPE.MiniDumpWithFullMemory
 		self.header_buffer.write(self.header.to_bytes())
