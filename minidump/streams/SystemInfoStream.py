@@ -57,7 +57,7 @@ class PROCESSOR_ARCHITECTURE(enum.Enum):
 	ARM = 5 #ARM
 	IA64 = 6 #Intel Itanium
 	INTEL = 0 #x86
-	AARCH64 = 0x8003 #ARM64
+	AARCH64 = 12 #ARM64
 	UNKNOWN = 0xffff #Unknown processor
 # https://msdn.microsoft.com/en-us/library/windows/desktop/ms680396(v=vs.85).aspx
 class PROCESSOR_LEVEL(enum.Enum):
