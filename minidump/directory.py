@@ -21,12 +21,13 @@ class MINIDUMP_DIRECTORY:
 
 		raw_stream_type_value = MINIDUMP_DIRECTORY.get_stream_type_value(buff)
 
-		# StreamType value that are over 0xffff are considered MINIDUMP_USER_STREAM streams
-		# and their format depends on the client used to create the minidump.
-		# As per the documentation, this stream should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
-		is_user_stream = raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value
+		# StreamType values over 0xffff are MINIDUMP_USER_STREAM streams, whose format
+		# depends on the client that created the minidump, and some writers also emit
+		# non-standard types inside the reserved range (e.g. Wine/Proton crash dumps
+		# contain stream type 0xFFF0). As per the documentation, unknown stream types
+		# should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
 		is_stream_supported = raw_stream_type_value in MINIDUMP_STREAM_TYPE._value2member_map_
-		if is_user_stream and not is_stream_supported:
+		if not is_stream_supported:
 			return None
 
 		md = MINIDUMP_DIRECTORY()
@@ -40,12 +41,13 @@ class MINIDUMP_DIRECTORY:
 		t = await buff.read(4)
 		raw_stream_type_value = int.from_bytes(t, byteorder = 'little', signed = False)
 
-		# StreamType value that are over 0xffff are considered MINIDUMP_USER_STREAM streams
-		# and their format depends on the client used to create the minidump.
-		# As per the documentation, this stream should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
-		is_user_stream = raw_stream_type_value > MINIDUMP_STREAM_TYPE.LastReservedStream.value
+		# StreamType values over 0xffff are MINIDUMP_USER_STREAM streams, whose format
+		# depends on the client that created the minidump, and some writers also emit
+		# non-standard types inside the reserved range (e.g. Wine/Proton crash dumps
+		# contain stream type 0xFFF0). As per the documentation, unknown stream types
+		# should be ignored : https://docs.microsoft.com/en-us/windows/win32/api/minidumpapiset/ne-minidumpapiset-minidumminidump_dirp_stream_type#remarks
 		is_stream_supported = raw_stream_type_value in MINIDUMP_STREAM_TYPE._value2member_map_
-		if is_user_stream and not is_stream_supported:
+		if not is_stream_supported:
 			return None
 
 		md = MINIDUMP_DIRECTORY()
