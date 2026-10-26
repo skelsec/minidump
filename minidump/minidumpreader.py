@@ -141,10 +141,7 @@ class MinidumpBufferedReader:
 		Repositions the current reader to match architecture alignment
 		"""
 		if alignment is None:
-			if self.reader.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.AMD64:
-				alignment = 8
-			else:
-				alignment = 4
+			alignment = self.reader.sizeof_ptr
 		offset = self.current_position % alignment
 		if offset == 0:
 			return
@@ -196,10 +193,7 @@ class MinidumpBufferedReader:
 		Reads a 4 byte small-endian singed int on 32 bit arch
 		Reads an 8 byte small-endian singed int on 64 bit arch
 		"""
-		if self.reader.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.AMD64:
-			return int.from_bytes(self.read(8), byteorder = 'little', signed = True)
-		else:
-			return int.from_bytes(self.read(4), byteorder = 'little', signed = True)
+		return int.from_bytes(self.read(self.reader.sizeof_ptr), byteorder = 'little', signed = True)
 
 	def read_uint(self):
 		"""
@@ -207,10 +201,7 @@ class MinidumpBufferedReader:
 		Reads a 4 byte small-endian unsinged int on 32 bit arch
 		Reads an 8 byte small-endian unsinged int on 64 bit arch
 		"""
-		if self.reader.sysinfo.ProcessorArchitecture == PROCESSOR_ARCHITECTURE.AMD64:
-			return int.from_bytes(self.read(8), byteorder = 'little', signed = False)
-		else:
-			return int.from_bytes(self.read(4), byteorder = 'little', signed = False)
+		return int.from_bytes(self.read(self.reader.sizeof_ptr), byteorder = 'little', signed = False)
 
 	def find(self, pattern):
 		"""
@@ -296,8 +287,12 @@ class MinidumpFileReader:
 		self.sizeof_long = 4
 		self.unpack_long = '<L'
 		if minidumpfile.sysinfo.ProcessorArchitecture in [PROCESSOR_ARCHITECTURE.AMD64, PROCESSOR_ARCHITECTURE.AARCH64]:
-			self.sizeof_ptr = 8
-			self.unpack_ptr = '<Q'
+			if minidumpfile.is_wow64:
+				self.sizeof_ptr = 4
+				self.unpack_ptr = '<L'
+			else:
+				self.sizeof_ptr = 8
+				self.unpack_ptr = '<Q'
 		elif self.sysinfo.ProcessorArchitecture in [PROCESSOR_ARCHITECTURE.INTEL,
 				PROCESSOR_ARCHITECTURE.ARM]:
 			self.sizeof_ptr = 4

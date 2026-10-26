@@ -45,6 +45,8 @@ class MinidumpFile:
 
 		self.peb:PEB = None
 
+		self.is_wow64:bool = False
+
 	@staticmethod
 	def parse(filename):
 		mf = MinidumpFile()
@@ -86,6 +88,8 @@ class MinidumpFile:
 			self.__parse_peb()
 		except Exception as e:
 			logging.exception('PEB parsing error!')
+		if self.modules:
+			self.is_wow64 = any(m.name.lower().endswith('wow64.dll') for m in self.modules.modules)
 
 	def __parse_header(self):
 		self.header = MinidumpHeader.parse(self.file_handle)

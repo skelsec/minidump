@@ -54,6 +54,8 @@ class AMinidumpFile:
 		self.memory_info = None
 		self.thread_info = None
 
+		self.is_wow64 = False
+
 	@staticmethod
 	async def parse(filename):
 		mf = AMinidumpFile()
@@ -91,6 +93,8 @@ class AMinidumpFile:
 	async def _parse(self):
 		await self.__parse_header()
 		await self.__parse_directories()
+		if self.modules:
+			self.is_wow64 = any(m.name.lower().endswith('wow64.dll') for m in self.modules.modules)
 
 	async def __parse_header(self):
 		self.header = await MinidumpHeader.aparse(self.file_handle)
